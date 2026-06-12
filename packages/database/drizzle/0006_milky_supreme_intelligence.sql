@@ -1,0 +1,1 @@
+ALTER TABLE "forms" ADD COLUMN "theme" varchar(20) DEFAULT 'paper' NOT NULL;
