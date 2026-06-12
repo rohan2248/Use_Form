@@ -1,7 +1,9 @@
 "use client";
 import Link from "next/link";
 import { useListPublicForms } from "~/hooks/api/form";
+import { useUser } from "~/hooks/api/auth";
 import { ThemeToggle } from "~/components/ui/theme-toggle";
+import { Logo } from "~/components/ui/logo";
 
 function ExploreCard({
   id,
@@ -23,104 +25,28 @@ function ExploreCard({
   return (
     <Link
       href={`/form/${id}`}
-      style={{
-        display: "block",
-        backgroundColor: "#FFFFFF",
-        border: "1px solid rgba(17,24,39,0.12)",
-        padding: "24px",
-        textDecoration: "none",
-        color: "#111827",
-        transition: "border-color 0.2s, box-shadow 0.2s, transform 0.2s",
-      }}
-      onMouseEnter={(e) => {
-        const el = e.currentTarget as HTMLAnchorElement;
-        el.style.borderColor = "#111827";
-        el.style.boxShadow = "4px 4px 0 #111827";
-        el.style.transform = "translate(-2px, -2px)";
-      }}
-      onMouseLeave={(e) => {
-        const el = e.currentTarget as HTMLAnchorElement;
-        el.style.borderColor = "rgba(17,24,39,0.12)";
-        el.style.boxShadow = "none";
-        el.style.transform = "none";
-      }}
+      className="block bg-surface border border-ink/12 p-6 no-underline text-ink transition-all duration-200 hover:border-ink hover:shadow-[4px_4px_0_var(--ink)] hover:-translate-x-[2px] hover:-translate-y-[2px]"
     >
-      <div
-        style={{
-          display: "inline-block",
-          border: "1.5px solid rgba(17,24,39,0.25)",
-          padding: "1px 8px",
-          fontFamily: "'PT Mono', monospace",
-          fontSize: 9,
-          letterSpacing: "0.12em",
-          textTransform: "uppercase",
-          color: "rgba(17,24,39,0.45)",
-          marginBottom: 14,
-        }}
-      >
+      <div className="inline-block border-[1.5px] border-ink/25 px-2 py-px font-mono text-[9px] tracking-[0.12em] uppercase text-ink/60 mb-3.5">
         Public form
       </div>
-      <h3
-        style={{
-          fontFamily: "'Montserrat', sans-serif",
-          fontWeight: 700,
-          fontSize: 15,
-          letterSpacing: "-0.01em",
-          marginBottom: 10,
-          lineHeight: 1.35,
-        }}
-      >
+      <h3 className="font-display font-bold text-[15px] tracking-tight leading-[1.35] mb-2.5 text-balance">
         {title}
       </h3>
       {description && (
-        <p
-          style={{
-            fontSize: 13,
-            lineHeight: 1.7,
-            color: "rgba(17,24,39,0.55)",
-            fontWeight: 300,
-            display: "-webkit-box",
-            WebkitLineClamp: 3,
-            WebkitBoxOrient: "vertical",
-            overflow: "hidden",
-            marginBottom: 18,
-          }}
-        >
+        <p className="text-[13px] leading-[1.7] text-ink/70 line-clamp-3 mb-[18px]">
           {description}
         </p>
       )}
       <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginTop: description ? 0 : 18,
-          borderTop: "1px solid rgba(17,24,39,0.07)",
-          paddingTop: 12,
-        }}
+        className="flex justify-between items-center border-t border-ink/8 pt-3"
+        style={{ marginTop: description ? 0 : 18 }}
       >
-        <span
-          style={{
-            fontFamily: "'PT Mono', monospace",
-            fontSize: 10,
-            letterSpacing: "0.08em",
-            color: "rgba(17,24,39,0.4)",
-            textTransform: "uppercase",
-          }}
-        >
+        <span className="font-mono text-[10px] tracking-[0.08em] uppercase text-ink/60">
           {responseCount} {responseCount === 1 ? "response" : "responses"}
         </span>
         {date && (
-          <span
-            style={{
-              fontFamily: "'PT Mono', monospace",
-              fontSize: 10,
-              letterSpacing: "0.06em",
-              color: "rgba(17,24,39,0.3)",
-            }}
-          >
-            {date}
-          </span>
+          <span className="font-mono text-[10px] tracking-[0.06em] text-ink/60">{date}</span>
         )}
       </div>
     </Link>
@@ -129,26 +55,13 @@ function ExploreCard({
 
 function SkeletonCard() {
   return (
-    <div
-      style={{
-        backgroundColor: "#FFFFFF",
-        border: "1px solid rgba(17,24,39,0.08)",
-        padding: "24px",
-      }}
-    >
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.4; }
-        }
-        .skel { background: rgba(17,24,39,0.07); border-radius: 2px; animation: pulse 1.8s ease-in-out infinite; }
-      `}</style>
+    <div className="bg-surface border border-ink/8 p-6" aria-hidden="true">
       <div className="skel" style={{ width: 64, height: 14, marginBottom: 16 }} />
       <div className="skel" style={{ width: "80%", height: 16, marginBottom: 8 }} />
       <div className="skel" style={{ width: "60%", height: 16, marginBottom: 18 }} />
       <div className="skel" style={{ width: "100%", height: 12, marginBottom: 6 }} />
       <div className="skel" style={{ width: "75%", height: 12, marginBottom: 20 }} />
-      <div style={{ borderTop: "1px solid rgba(17,24,39,0.07)", paddingTop: 12, display: "flex", justifyContent: "space-between" }}>
+      <div className="border-t border-ink/8 pt-3 flex justify-between">
         <div className="skel" style={{ width: 72, height: 11 }} />
         <div className="skel" style={{ width: 56, height: 11 }} />
       </div>
@@ -156,214 +69,131 @@ function SkeletonCard() {
   );
 }
 
+const CARD_GRID =
+  "grid gap-px bg-ink/10 grid-cols-[repeat(auto-fill,minmax(min(300px,100%),1fr))]";
+
 export default function ExplorePage() {
-  const { forms, isLoading } = useListPublicForms();
+  const { forms, isLoading, error } = useListPublicForms();
+  const { user } = useUser();
+
+  const ctaHref = user ? "/dashboard" : "/sign-up";
 
   return (
     <div
-      style={{ fontFamily: "'Roboto', sans-serif", backgroundColor: "#FAFAF8", color: "#111827", minHeight: "100vh" }}
+      className="explore bg-paper text-ink min-h-screen"
+      style={{ fontFamily: "'Roboto', sans-serif" }}
     >
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;700;900&family=Roboto:wght@300;400;500&family=PT+Mono&display=swap');
-        * { box-sizing: border-box; }
-        ::selection { background: #111827; color: #FAFAF8; }
-        .paper-grain {
+        .explore .font-display { font-family: 'Montserrat', sans-serif; }
+        .explore .font-mono    { font-family: 'PT Mono', monospace; }
+        .explore ::selection   { background: var(--ink); color: var(--paper); }
+        .explore :is(a, button, input):focus-visible {
+          outline: 2px solid var(--ink);
+          outline-offset: 2px;
+        }
+        .explore .skel {
+          background: color-mix(in oklab, var(--ink) 7%, transparent);
+          border-radius: 2px;
+          animation: explore-pulse 1.8s ease-in-out infinite;
+        }
+        @keyframes explore-pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.4; }
+        }
+        .explore .paper-grain {
           position: fixed; inset: 0; pointer-events: none; z-index: 0;
           background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
           background-size: 200px 200px; opacity: 0.5;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .explore *, .explore *::before, .explore *::after {
+            transition-duration: 0.01ms !important;
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+          }
         }
       `}</style>
 
       <div className="paper-grain" />
 
-      {/* Header */}
-      <header
-        style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 50,
-          backgroundColor: "rgba(250,250,248,0.95)",
-          backdropFilter: "blur(8px)",
-          borderBottom: "1px solid rgba(17,24,39,0.1)",
-          padding: "0 5vw",
-        }}
-      >
-        <div
-          style={{
-            maxWidth: 1200,
-            margin: "0 auto",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            height: 60,
-          }}
-        >
-          <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none", color: "#111827" }}>
-            <span style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 900, fontSize: 16, letterSpacing: "-0.02em" }}>
-              Go
-            </span>
-            <span
-              style={{
-                display: "inline-block",
-                border: "1.5px solid #111827",
-                padding: "1px 6px",
-                fontFamily: "'PT Mono', monospace",
-                fontSize: 8,
-                letterSpacing: "0.12em",
-                textTransform: "uppercase",
-              }}
-            >
-              Form
-            </span>
+      <header className="sticky top-0 z-50 bg-paper/95 backdrop-blur-[8px] border-b border-ink/10 px-[5vw]">
+        <div className="max-w-[1200px] mx-auto flex items-center justify-between h-[60px]">
+          <Link href="/" className="flex items-center no-underline text-ink">
+            <Logo size={16} />
           </Link>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div className="flex items-center gap-3">
             <ThemeToggle />
             <Link
-              href="/sign-up"
-              style={{
-                background: "#111827",
-                color: "#FAFAF8",
-                border: "1px solid #111827",
-                padding: "8px 18px",
-                fontFamily: "'Montserrat', sans-serif",
-                fontWeight: 500,
-                fontSize: 11,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                textDecoration: "none",
-                transition: "background 0.2s",
-              }}
+              href={ctaHref}
+              className="bg-ink text-paper border border-ink px-[18px] py-2 font-display font-medium text-[11px] tracking-[0.08em] uppercase no-underline hover:bg-ink/85 transition-colors duration-200"
             >
-              Get started
+              {user ? "Dashboard" : "Get started"}
             </Link>
           </div>
         </div>
       </header>
 
-      <main style={{ position: "relative", zIndex: 1 }}>
-        {/* Hero */}
-        <section
-          style={{
-            padding: "72px 5vw 56px",
-            borderBottom: "1px solid rgba(17,24,39,0.1)",
-          }}
-        >
-          <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-            <span
-              style={{
-                display: "inline-block",
-                border: "2px solid #111827",
-                padding: "2px 10px",
-                fontFamily: "'PT Mono', monospace",
-                fontSize: 10,
-                letterSpacing: "0.12em",
-                textTransform: "uppercase",
-                marginBottom: 20,
-              }}
-            >
+      <main className="relative z-[1]">
+        <section className="pt-[72px] pb-14 px-[5vw] border-b border-ink/10">
+          <div className="max-w-[1200px] mx-auto">
+            <span className="inline-block border-2 border-ink px-2.5 py-0.5 font-mono text-[10px] tracking-[0.12em] uppercase mb-5">
               Explore
             </span>
-            <h1
-              style={{
-                fontFamily: "'Montserrat', sans-serif",
-                fontWeight: 900,
-                fontSize: "clamp(36px, 6vw, 72px)",
-                letterSpacing: "-0.03em",
-                lineHeight: 1.0,
-                marginBottom: 16,
-              }}
-            >
+            <h1 className="font-display font-black text-[clamp(36px,6vw,72px)] tracking-[-0.03em] leading-none mb-4 text-balance">
               Public forms.
             </h1>
-            <p
-              style={{
-                fontSize: 16,
-                lineHeight: 1.7,
-                color: "rgba(17,24,39,0.55)",
-                fontWeight: 300,
-                maxWidth: 440,
-              }}
-            >
-              Browse and respond to forms shared publicly by the community. Discover templates, surveys, and more.
+            <p className="text-base leading-[1.7] text-ink/70 font-light max-w-[440px]">
+              Browse and respond to forms shared publicly by the community. Discover templates,
+              surveys, and more.
             </p>
           </div>
         </section>
 
-        {/* Grid */}
-        <section style={{ padding: "56px 5vw", minHeight: 400 }}>
-          <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+        <section className="py-14 px-[5vw] min-h-[400px]">
+          <div className="max-w-[1200px] mx-auto">
             {isLoading ? (
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-                  gap: 1,
-                  backgroundColor: "rgba(17,24,39,0.08)",
-                }}
-              >
+              <div className={CARD_GRID}>
                 {Array.from({ length: 6 }).map((_, i) => (
                   <SkeletonCard key={i} />
                 ))}
               </div>
-            ) : !forms || forms.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "80px 0" }}>
-                <span
-                  style={{
-                    display: "inline-block",
-                    border: "2px solid rgba(17,24,39,0.2)",
-                    padding: "2px 10px",
-                    fontFamily: "'PT Mono', monospace",
-                    fontSize: 10,
-                    letterSpacing: "0.12em",
-                    textTransform: "uppercase",
-                    color: "rgba(17,24,39,0.35)",
-                    marginBottom: 20,
-                  }}
+            ) : error ? (
+              <div className="text-center py-20">
+                <span className="inline-block border-2 border-ink/25 px-2.5 py-0.5 font-mono text-[10px] tracking-[0.12em] uppercase text-ink/60 mb-5">
+                  Something went wrong
+                </span>
+                <h2 className="font-display font-bold text-[28px] tracking-tight mb-3">
+                  Couldn&rsquo;t load public forms.
+                </h2>
+                <p className="text-[15px] text-ink/70 mb-8">
+                  Check your connection and give it another try.
+                </p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="bg-ink text-paper border border-ink px-7 py-3 font-display font-medium text-xs tracking-[0.08em] uppercase hover:bg-ink/85 transition-colors duration-200"
                 >
+                  Try again
+                </button>
+              </div>
+            ) : !forms || forms.length === 0 ? (
+              <div className="text-center py-20">
+                <span className="inline-block border-2 border-ink/25 px-2.5 py-0.5 font-mono text-[10px] tracking-[0.12em] uppercase text-ink/60 mb-5">
                   Nothing here yet
                 </span>
-                <h2
-                  style={{
-                    fontFamily: "'Montserrat', sans-serif",
-                    fontWeight: 700,
-                    fontSize: 28,
-                    letterSpacing: "-0.02em",
-                    marginBottom: 12,
-                  }}
-                >
+                <h2 className="font-display font-bold text-[28px] tracking-tight mb-3">
                   No public forms yet.
                 </h2>
-                <p style={{ fontSize: 15, color: "rgba(17,24,39,0.5)", fontWeight: 300, marginBottom: 32 }}>
-                  Be the first to share one.
-                </p>
+                <p className="text-[15px] text-ink/70 font-light mb-8">Be the first to share one.</p>
                 <Link
-                  href="/sign-up"
-                  style={{
-                    background: "#111827",
-                    color: "#FAFAF8",
-                    border: "1px solid #111827",
-                    padding: "12px 28px",
-                    fontFamily: "'Montserrat', sans-serif",
-                    fontWeight: 500,
-                    fontSize: 12,
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                    textDecoration: "none",
-                    display: "inline-block",
-                  }}
+                  href={ctaHref}
+                  className="inline-block bg-ink text-paper border border-ink px-7 py-3 font-display font-medium text-xs tracking-[0.08em] uppercase no-underline hover:bg-ink/85 transition-colors duration-200"
                 >
                   Create a form
                 </Link>
               </div>
             ) : (
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-                  gap: 1,
-                  backgroundColor: "rgba(17,24,39,0.08)",
-                }}
-              >
+              <div className={CARD_GRID}>
                 {forms.map((form) => (
                   <ExploreCard key={form.id} {...form} />
                 ))}
@@ -373,50 +203,16 @@ export default function ExplorePage() {
         </section>
       </main>
 
-      {/* Footer */}
-      <footer style={{ borderTop: "1px solid rgba(17,24,39,0.12)", padding: "40px 5vw" }}>
-        <div
-          style={{
-            maxWidth: 1200,
-            margin: "0 auto",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: 16,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 900, fontSize: 14, letterSpacing: "-0.02em" }}>
-              Go
-            </span>
-            <span
-              style={{
-                border: "1.5px solid #111827",
-                padding: "1px 6px",
-                fontFamily: "'PT Mono', monospace",
-                fontSize: 8,
-                letterSpacing: "0.12em",
-                textTransform: "uppercase",
-              }}
-            >
-              Form
-            </span>
+      <footer className="border-t border-ink/12 py-10 px-[5vw]">
+        <div className="max-w-[1200px] mx-auto flex justify-between items-center flex-wrap gap-4">
+          <div className="flex items-center">
+            <Logo size={14} />
           </div>
           <Link
-            href="/sign-up"
-            style={{
-              fontFamily: "'Montserrat', sans-serif",
-              fontSize: 11,
-              fontWeight: 500,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              color: "#111827",
-              textDecoration: "none",
-              opacity: 0.55,
-            }}
+            href={ctaHref}
+            className="font-display text-[11px] font-medium tracking-[0.08em] uppercase text-ink/70 hover:text-ink no-underline transition-colors duration-200"
           >
-            Create your own →
+            {user ? "Back to your dashboard →" : "Create your own →"}
           </Link>
         </div>
       </footer>

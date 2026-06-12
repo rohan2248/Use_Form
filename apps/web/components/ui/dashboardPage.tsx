@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { ThemeToggle } from "~/components/ui/theme-toggle";
+import { Logo, LogoMark } from "~/components/ui/logo";
 import { useCreateForm, useDeleteForm, useListForms, useGetFields, useCreateField, useDeleteField, useUpdateField, useReorderField, useUpdateFormStatus, useUpdateFormVisibility, useUpdateFormSettings, useGetFormSubmissions, useGetAnalyticsSummary, useGetAllSubmissions } from "~/hooks/api/form";
 import { useUser } from "~/hooks/api/auth";
 
@@ -56,33 +57,16 @@ function formatRelativeTime(date: Date | string | null): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function Sparkline({ data }: { data: number[] }) {
-  if (!data.length) return <div style={{ width: 56, height: 32 }} />;
-  const max = Math.max(...data);
-  return (
-    <div className="flex items-end gap-[2px]" style={{ width: 56, height: 32 }}>
-      {data.slice(-14).map((v, i) => (
-        <div
-          key={i}
-          className="flex-1 bg-ink"
-          style={{ height: `${Math.round((v / max) * 32)}px`, minWidth: 2 }}
-        />
-      ))}
-    </div>
-  );
-}
-
 function BarChart({ data, height = 72 }: { data: number[]; height?: number }) {
-  const max = Math.max(...data);
+  const max = Math.max(...data, 1);
   return (
     <div className="flex items-end gap-[3px]" style={{ height }}>
       {data.map((v, i) => (
         <div
           key={i}
-          className="flex-1"
+          className={`flex-1 ${i === data.length - 1 ? "bg-ink" : "bg-ink/25"}`}
           style={{
             height: `${Math.round((v / max) * height)}px`,
-            background: i === data.length - 1 ? "#111827" : "rgba(17,24,39,0.22)",
             minWidth: 3,
           }}
         />
@@ -94,7 +78,7 @@ function BarChart({ data, height = 72 }: { data: number[]; height?: number }) {
 function BarRow({ label, pct }: { label: string; pct: number }) {
   return (
     <div className="flex items-center gap-3 mb-2">
-      <span className="text-[11px] font-light text-ink/60 w-[90px] flex-shrink-0 truncate">
+      <span className="text-[11px] text-ink/70 w-[90px] flex-shrink-0 truncate">
         {label}
       </span>
       <div className="flex-1 h-[6px] bg-ink/8">
@@ -109,7 +93,7 @@ function CountRow({ label, count, max }: { label: string; count: number; max: nu
   const pct = max > 0 ? Math.round((count / max) * 100) : 0;
   return (
     <div className="flex items-center gap-3 mb-2">
-      <span className="text-[11px] font-light text-ink/60 w-[100px] flex-shrink-0 truncate">{label}</span>
+      <span className="text-[11px] text-ink/70 w-[100px] flex-shrink-0 truncate">{label}</span>
       <div className="flex-1 h-[6px] bg-ink/8">
         <div className="h-full bg-ink" style={{ width: `${pct}%` }} />
       </div>
@@ -122,14 +106,14 @@ function CountRow({ label, count, max }: { label: string; count: number; max: nu
 // ─── Badge / Status ───────────────────────────────────────────────────────────
 
 const STATUS_STYLES: Record<FormStatus, string> = {
-  published: "bg-green-50 text-green-800",
-  unpublished: "bg-amber-50 text-amber-800",
-  draft: "bg-stone-100 text-stone-600",
+  published: "bg-green-50 text-green-800 dark:bg-green-950 dark:text-green-300",
+  unpublished: "bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
+  draft: "bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-300",
 };
 const STATUS_DOT: Record<FormStatus, string> = {
-  published: "bg-green-700",
-  unpublished: "bg-amber-700",
-  draft: "bg-stone-500",
+  published: "bg-green-700 dark:bg-green-400",
+  unpublished: "bg-amber-700 dark:bg-amber-400",
+  draft: "bg-stone-500 dark:bg-stone-400",
 };
 
 function StatusBadge({ status }: { status: FormStatus }) {
@@ -158,6 +142,16 @@ function useToast() {
   }, []);
 
   return { msg, visible, toast };
+}
+
+function useEscape(onEscape: () => void) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onEscape();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onEscape]);
 }
 
 // ─── Visibility selector ──────────────────────────────────────────────────────
@@ -200,7 +194,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
       className={`w-9 h-[22px] rounded-full relative transition-colors flex-shrink-0 ${checked ? "bg-ink" : "bg-ink/20"}`}
     >
       <span
-        className="absolute top-0.5 w-[17px] h-[17px] bg-white rounded-full transition-all"
+        className="absolute top-0.5 w-[17px] h-[17px] bg-paper rounded-full ring-1 ring-black/10 dark:ring-white/15 transition-all"
         style={{ left: checked ? "calc(100% - 19px)" : 2 }}
       />
     </button>
@@ -221,12 +215,12 @@ function StatCard({
   color?: "green" | "red";
 }) {
   return (
-    <div className="bg-white border border-ink/10 p-4">
-      <div className="font-mono text-[9px] tracking-widest uppercase text-ink/40 mb-2">{label}</div>
+    <div className="bg-surface border border-ink/10 p-4">
+      <div className="font-mono text-[9px] tracking-widest uppercase text-ink/60 mb-2">{label}</div>
       <div className="font-display font-black text-3xl tracking-tight leading-none">{value}</div>
       {sub && (
         <div
-          className={`text-[11px] mt-1 font-light ${color === "green" ? "text-green-700" : color === "red" ? "text-red-700" : "text-ink/40"}`}
+          className={`text-[11px] mt-1 ${color === "green" ? "text-green-700 dark:text-green-400" : color === "red" ? "text-red-700 dark:text-red-400" : "text-ink/60"}`}
         >
           {sub}
         </div>
@@ -247,8 +241,8 @@ function Panel({
   className?: string;
 }) {
   return (
-    <div className={`bg-white border border-ink/10 p-5 ${className}`}>
-      <div className="font-mono text-[9px] tracking-widest uppercase text-ink/40 mb-4">{title}</div>
+    <div className={`bg-surface border border-ink/10 p-5 ${className}`}>
+      <div className="font-mono text-[9px] tracking-widest uppercase text-ink/60 mb-4">{title}</div>
       {children}
     </div>
   );
@@ -277,19 +271,31 @@ function FormCard({
   const [vis, setVis] = useState<Visibility>(form.visibility);
   const ref = useRef<HTMLDivElement>(null);
 
+  // Keep optimistic local state in sync when the server value changes (e.g. refetch after a failed mutation)
+  useEffect(() => {
+    setVis(form.visibility);
+  }, [form.visibility]);
+
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setMenuOpen(false);
     };
+    const keyHandler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
     document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("keydown", keyHandler);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("keydown", keyHandler);
+    };
   }, []);
 
   const isPublished = form.status === "published";
   const isDraft = form.status === "draft";
 
   return (
-    <div className="bg-white border border-ink/10 hover:border-ink/35 transition-all hover:shadow-[3px_3px_0_rgba(17,24,39,0.08)]">
+    <div className="bg-surface border border-ink/10 hover:border-ink/35 transition-all hover:shadow-[3px_3px_0_rgba(17,24,39,0.08)] dark:shadow-[3px_3px_0_rgba(0,0,0,0.45)]">
       <div className="p-4 border-b border-ink/8">
         <div className="flex justify-between items-start">
           <div className="flex-1 min-w-0 pr-2">
@@ -297,20 +303,22 @@ function FormCard({
             <div className="font-display font-bold text-sm tracking-tight mt-2 mb-1 leading-tight">
               {form.title}
             </div>
-            <div className="text-[11px] text-ink/40 font-light">
+            <div className="text-[11px] text-ink/60">
               Updated {formatRelativeTime(form.updatedAt)}
             </div>
           </div>
           <div className="relative flex-shrink-0" ref={ref}>
             <button
               onClick={() => setMenuOpen((o) => !o)}
-              className="text-ink/40 hover:text-ink px-1 py-0.5 text-lg leading-none"
+              className="text-ink/55 hover:text-ink px-1 py-0.5 text-lg leading-none"
               aria-label="Form actions"
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
             >
               ⋯
             </button>
             {menuOpen && (
-              <div className="absolute right-0 top-6 bg-white border border-ink/15 shadow-[3px_3px_0_rgba(17,24,39,0.08)] py-1 min-w-[148px] z-20">
+              <div className="absolute right-0 top-6 bg-surface border border-ink/15 shadow-[3px_3px_0_rgba(17,24,39,0.08)] dark:shadow-[3px_3px_0_rgba(0,0,0,0.45)] py-1 min-w-[148px] z-20">
                 <MenuItem
                   icon="ti-edit"
                   label="Edit form"
@@ -323,7 +331,7 @@ function FormCard({
                   icon="ti-eye"
                   label="Preview"
                   onClick={() => {
-                    onAction("Preview opened");
+                    window.open(`/form/${form.id}`, "_blank", "noopener,noreferrer");
                     setMenuOpen(false);
                   }}
                 />
@@ -392,7 +400,7 @@ function FormCard({
           <div className="font-display font-bold text-base">
             {form.responseCount > 0 ? form.responseCount.toLocaleString() : "—"}
           </div>
-          <div className="font-mono text-[8px] tracking-widest uppercase text-ink/35 mt-0.5">
+          <div className="font-mono text-[9px] tracking-widest uppercase text-ink/60 mt-0.5">
             Responses
           </div>
         </div>
@@ -434,7 +442,7 @@ function MenuItem({
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-2 px-3 py-1.5 text-[12px] hover:bg-ink/5 transition-colors ${danger ? "text-red-700 hover:bg-red-50" : "text-ink"}`}
+      className={`w-full flex items-center gap-2 px-3 py-1.5 text-[12px] hover:bg-ink/5 transition-colors ${danger ? "text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40" : "text-ink"}`}
     >
       <i className={`ti ${icon}`} style={{ fontSize: 14 }} aria-hidden="true" />
       {label}
@@ -458,8 +466,8 @@ function ActionBtn({
       onClick={onClick}
       className={`flex-1 flex items-center justify-center gap-1 py-1.5 font-mono text-[9px] tracking-widest uppercase transition-colors rounded-[2px] ${
         danger
-          ? "text-ink/40 hover:bg-red-50 hover:text-red-700"
-          : "text-ink/45 hover:bg-ink/6 hover:text-ink"
+          ? "text-ink/60 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/40 dark:hover:text-red-400"
+          : "text-ink/60 hover:bg-ink/6 hover:text-ink"
       }`}
     >
       <i className={`ti ${icon}`} style={{ fontSize: 13 }} aria-hidden="true" />
@@ -471,6 +479,8 @@ function ActionBtn({
 // ─── Views ────────────────────────────────────────────────────────────────────
 
 function FormsView({
+  search,
+  onClearSearch,
   onViewDetail,
   onEditFields,
   onDelete,
@@ -479,6 +489,8 @@ function FormsView({
   onVisibilityChange,
   toast,
 }: {
+  search: string;
+  onClearSearch: () => void;
   onViewDetail: (id: string) => void;
   onEditFields: (id: string) => void;
   onDelete: (id: string, title: string) => void;
@@ -491,16 +503,44 @@ function FormsView({
   const { forms, isLoading } = useListForms();
 
   const all = forms ?? [];
-  const filtered = filter === "all" ? all : all.filter((f) => f.status === filter);
+  const query = search.trim().toLowerCase();
+  const filtered = all.filter(
+    (f) =>
+      (filter === "all" || f.status === filter) &&
+      (query === "" ||
+        f.title.toLowerCase().includes(query) ||
+        (f.description ?? "").toLowerCase().includes(query)),
+  );
 
   const publishedCount = all.filter((f) => f.status === "published").length;
   const draftCount = all.filter((f) => f.status === "draft").length;
   const unpublishedCount = all.filter((f) => f.status === "unpublished").length;
   const totalResponses = all.reduce((s, f) => s + f.responseCount, 0);
 
+  if (!isLoading && all.length === 0) {
+    return (
+      <div className="bg-surface border border-ink/10 flex flex-col items-center justify-center px-6 py-20 text-center">
+        <i className="ti ti-clipboard-text text-ink/20 mb-4" style={{ fontSize: 40 }} aria-hidden="true" />
+        <h2 className="font-display font-black text-xl tracking-tight mb-2">
+          Let&rsquo;s build your first form
+        </h2>
+        <p className="text-[13px] text-ink/60 mb-6 max-w-xs">
+          Create a form, share the link, and watch the responses roll in — it takes about a minute.
+        </p>
+        <button
+          onClick={onNewForm}
+          className="flex items-center gap-1.5 bg-ink text-paper px-5 py-2.5 font-display font-semibold text-[11px] tracking-widest uppercase hover:bg-ink/80 transition-all"
+        >
+          <i className="ti ti-plus" style={{ fontSize: 14 }} aria-hidden="true" />
+          Create your first form
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div>
-      <div className="grid grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-6">
         <StatCard
           label="Total forms"
           value={isLoading ? "—" : String(all.length)}
@@ -519,9 +559,11 @@ function FormsView({
         <StatCard label="Drafts" value={isLoading ? "—" : String(draftCount)} />
       </div>
 
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="font-mono text-[10px] tracking-widest uppercase text-ink/45">All forms</h2>
-        <div className="flex gap-1.5">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <h2 className="font-mono text-[10px] tracking-widest uppercase text-ink/60">
+          {query ? `Results for “${search.trim()}”` : "All forms"}
+        </h2>
+        <div className="flex gap-1.5 flex-wrap">
           {(["all", "published", "unpublished", "draft"] as const).map((f) => (
             <button
               key={f}
@@ -529,7 +571,7 @@ function FormsView({
               className={`font-mono text-[9px] tracking-widest uppercase px-3 py-1.5 border transition-all ${
                 filter === f
                   ? "bg-ink text-paper border-ink"
-                  : "border-ink/15 text-ink/50 hover:bg-ink hover:text-paper hover:border-ink"
+                  : "border-ink/15 text-ink/60 hover:bg-ink hover:text-paper hover:border-ink"
               }`}
             >
               {f}
@@ -541,17 +583,34 @@ function FormsView({
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="bg-white border border-ink/10 h-48 animate-pulse" />
+            <div key={i} className="bg-surface border border-ink/10 h-48 animate-pulse" />
           ))}
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="border-[1.5px] border-dashed border-ink/20 flex flex-col items-center justify-center gap-3 py-14 px-6 text-center">
+          <p className="text-[13px] text-ink/60">
+            {query
+              ? `No forms match “${search.trim()}”${filter !== "all" ? ` in ${filter}` : ""}.`
+              : `No ${filter} forms yet.`}
+          </p>
+          <button
+            onClick={() => {
+              setFilter("all");
+              onClearSearch();
+            }}
+            className="border border-ink/20 px-3 py-1.5 font-display font-semibold text-[10px] tracking-widest uppercase text-ink/70 hover:bg-ink hover:text-paper hover:border-ink transition-all"
+          >
+            Clear filters
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           <button
             onClick={onNewForm}
-            className="border-[1.5px] border-dashed border-ink/20 hover:border-ink hover:bg-ink/2 transition-all flex flex-col items-center justify-center gap-2 h-50 cursor-pointer"
+            className="border-[1.5px] border-dashed border-ink/20 hover:border-ink hover:bg-ink/4 transition-all flex flex-col items-center justify-center gap-2 h-50 cursor-pointer"
           >
-            <i className="ti ti-plus text-ink/25" style={{ fontSize: 28 }} aria-hidden="true" />
-            <span className="font-display font-semibold text-[11px] tracking-widest uppercase text-ink/40">
+            <i className="ti ti-plus text-ink/40" style={{ fontSize: 28 }} aria-hidden="true" />
+            <span className="font-display font-semibold text-[11px] tracking-widest uppercase text-ink/60">
               New form
             </span>
           </button>
@@ -624,7 +683,7 @@ function AnalyticsView() {
 
   return (
     <div>
-      <div className="grid grid-cols-4 gap-3 mb-5">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-5">
         <StatCard
           label="Total responses"
           value={isLoading ? "—" : totalResponses.toLocaleString()}
@@ -652,25 +711,25 @@ function AnalyticsView() {
         {summaryLoading ? (
           <div className="h-[72px] bg-ink/5 animate-pulse" />
         ) : dailyData.every((v) => v === 0) ? (
-          <div className="h-[72px] flex items-center justify-center text-[11px] text-ink/35 font-light">
+          <div className="h-[72px] flex items-center justify-center text-[11px] text-ink/60">
             No responses in the last 30 days
           </div>
         ) : (
           <>
             <BarChart data={dailyData} height={72} />
-            <div className="flex justify-between mt-1.5 font-mono text-[8px] text-ink/30">
+            <div className="flex justify-between mt-1.5 font-mono text-[9px] text-ink/60">
               {dateLabels.map((l) => <span key={l}>{l}</span>)}
             </div>
           </>
         )}
       </Panel>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Panel title="Responses by form">
           {isLoading ? (
             <div className="space-y-2">{[1, 2, 3].map((i) => <div key={i} className="h-5 bg-ink/5 animate-pulse" />)}</div>
           ) : topForms.length === 0 ? (
-            <div className="text-[11px] text-ink/35 font-light py-3 text-center">No responses yet</div>
+            <div className="text-[11px] text-ink/60 py-3 text-center">No responses yet</div>
           ) : (
             topForms.map((f) => <CountRow key={f.id} label={f.title} count={f.responseCount} max={maxResponses} />)
           )}
@@ -687,7 +746,15 @@ function AnalyticsView() {
   );
 }
 
-function ResponsesView({ forms, toast }: { forms: Form[]; toast: (m: string) => void }) {
+function ResponsesView({
+  forms,
+  toast,
+  onOpenForm,
+}: {
+  forms: Form[];
+  toast: (m: string) => void;
+  onOpenForm: (id: string) => void;
+}) {
   const { submissions, isLoading } = useGetAllSubmissions();
   const [formFilter, setFormFilter] = useState<string>("all");
   const [visibleCount, setVisibleCount] = useState(20);
@@ -737,15 +804,15 @@ function ResponsesView({ forms, toast }: { forms: Form[]; toast: (m: string) => 
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="font-mono text-[10px] tracking-widest uppercase text-ink/45">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <h2 className="font-mono text-[10px] tracking-widest uppercase text-ink/60">
           All responses
         </h2>
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-2 items-center flex-wrap">
           <select
             value={formFilter}
             onChange={(e) => { setFormFilter(e.target.value); setVisibleCount(20); }}
-            className="font-mono text-[10px] tracking-widest border border-ink/15 px-3 py-1.5 bg-white text-ink uppercase cursor-pointer"
+            className="font-mono text-[10px] tracking-widest border border-ink/15 px-3 py-1.5 bg-surface text-ink uppercase cursor-pointer"
           >
             <option value="all">All forms</option>
             {forms.map((f) => (
@@ -762,7 +829,7 @@ function ResponsesView({ forms, toast }: { forms: Form[]; toast: (m: string) => 
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3 mb-5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
         <StatCard label="Total responses" value={String(totalResponses)} sub="Across all forms" />
         <StatCard
           label="Active forms"
@@ -781,9 +848,9 @@ function ResponsesView({ forms, toast }: { forms: Form[]; toast: (m: string) => 
         />
       </div>
 
-      <div className="bg-white border border-ink/10">
+      <div className="bg-surface border border-ink/10">
         <div className="px-5 py-3 border-b border-ink/8">
-          <span className="font-mono text-[9px] tracking-widest uppercase text-ink/40">
+          <span className="font-mono text-[9px] tracking-widest uppercase text-ink/60">
             {isLoading ? "Loading…" : `${filtered.length} submission${filtered.length !== 1 ? "s" : ""}`}
           </span>
         </div>
@@ -800,7 +867,7 @@ function ResponsesView({ forms, toast }: { forms: Form[]; toast: (m: string) => 
                 {["Form", "Submitted", "Fields", ""].map((h) => (
                   <th
                     key={h}
-                    className="font-mono text-[9px] tracking-widest uppercase text-ink/40 text-left px-3 py-2 border-b border-ink/10"
+                    className="font-mono text-[9px] tracking-widest uppercase text-ink/60 text-left px-3 py-2 border-b border-ink/10"
                   >
                     {h}
                   </th>
@@ -810,27 +877,28 @@ function ResponsesView({ forms, toast }: { forms: Form[]; toast: (m: string) => 
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={4} className="px-3 py-8 text-center font-mono text-[10px] text-ink/35 uppercase tracking-widest">
+                  <td colSpan={4} className="px-3 py-8 text-center font-mono text-[10px] text-ink/60 uppercase tracking-widest">
                     Loading…
                   </td>
                 </tr>
               ) : visible.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-3 py-8 text-center font-mono text-[10px] text-ink/35 uppercase tracking-widest">
+                  <td colSpan={4} className="px-3 py-8 text-center font-mono text-[10px] text-ink/60 uppercase tracking-widest">
                     No responses yet
                   </td>
                 </tr>
               ) : (
                 visible.map((s) => (
-                  <tr key={s.id} className="hover:bg-ink/2 border-b border-ink/6 last:border-b-0">
+                  <tr key={s.id} className="hover:bg-ink/4 border-b border-ink/6 last:border-b-0">
                     <td className="px-3 py-2.5 font-medium text-[11px] text-ink/70 truncate">{s.formTitle}</td>
-                    <td className="px-3 py-2.5 font-mono text-[10px] text-ink/35">{formatSubmittedAt(s.createdAt)}</td>
-                    <td className="px-3 py-2.5 font-mono text-[10px] text-ink/50">{s.value?.length ?? 0}</td>
+                    <td className="px-3 py-2.5 font-mono text-[10px] text-ink/60">{formatSubmittedAt(s.createdAt)}</td>
+                    <td className="px-3 py-2.5 font-mono text-[10px] text-ink/60">{s.value?.length ?? 0}</td>
                     <td className="px-3 py-2.5">
                       <button
-                        onClick={() => toast("Response ID: " + s.id)}
-                        className="text-ink/40 hover:text-ink transition-colors"
-                        aria-label="View response"
+                        onClick={() => onOpenForm(s.formId)}
+                        className="text-ink/55 hover:text-ink transition-colors"
+                        aria-label={`View responses for ${s.formTitle}`}
+                        title="View form responses"
                       >
                         <i className="ti ti-eye" style={{ fontSize: 14 }} aria-hidden="true" />
                       </button>
@@ -842,7 +910,7 @@ function ResponsesView({ forms, toast }: { forms: Form[]; toast: (m: string) => 
           </table>
         </div>
         <div className="px-5 py-3 border-t border-ink/6 flex justify-between items-center">
-          <span className="font-mono text-[9px] tracking-widest uppercase text-ink/35">
+          <span className="font-mono text-[9px] tracking-widest uppercase text-ink/60">
             Showing {Math.min(visibleCount, filtered.length)} of {filtered.length}
           </span>
           {visibleCount < filtered.length && (
@@ -865,15 +933,15 @@ const FIELD_TYPES = ["text", "number", "date", "email", "select", "checkbox", "r
 type FieldType = typeof FIELD_TYPES[number];
 
 const FIELD_TYPE_COLORS: Record<FieldType, string> = {
-  text: "bg-stone-100 text-stone-600",
-  number: "bg-blue-50 text-blue-700",
-  date: "bg-purple-50 text-purple-700",
-  email: "bg-teal-50 text-teal-700",
-  select: "bg-orange-50 text-orange-700",
-  checkbox: "bg-green-50 text-green-700",
-  radio: "bg-indigo-50 text-indigo-700",
-  yesno: "bg-pink-50 text-pink-700",
-  multiselect: "bg-amber-50 text-amber-700",
+  text: "bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-300",
+  number: "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
+  date: "bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300",
+  email: "bg-teal-50 text-teal-700 dark:bg-teal-950 dark:text-teal-300",
+  select: "bg-orange-50 text-orange-700 dark:bg-orange-950 dark:text-orange-300",
+  checkbox: "bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300",
+  radio: "bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300",
+  yesno: "bg-pink-50 text-pink-700 dark:bg-pink-950 dark:text-pink-300",
+  multiselect: "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
 };
 
 function FieldsTab({ formId, toast }: { formId: string; toast: (m: string) => void }) {
@@ -1002,7 +1070,7 @@ function FieldsTab({ formId, toast }: { formId: string; toast: (m: string) => vo
     return (
       <div className="space-y-2">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="bg-white border border-ink/10 h-14 animate-pulse" />
+          <div key={i} className="bg-surface border border-ink/10 h-14 animate-pulse" />
         ))}
       </div>
     );
@@ -1011,10 +1079,10 @@ function FieldsTab({ formId, toast }: { formId: string; toast: (m: string) => vo
   return (
     <div className="space-y-2">
       {sorted.length === 0 && !adding && (
-        <div className="bg-white border border-ink/10 flex flex-col items-center justify-center py-16 text-center">
+        <div className="bg-surface border border-ink/10 flex flex-col items-center justify-center py-16 text-center">
           <i className="ti ti-layout-list text-ink/20 mb-3" style={{ fontSize: 32 }} aria-hidden="true" />
-          <div className="font-display font-semibold text-sm text-ink/40 mb-1">No fields yet</div>
-          <div className="text-[11px] text-ink/30 mb-4">Add fields to build your form</div>
+          <div className="font-display font-semibold text-sm text-ink/70 mb-1">No fields yet</div>
+          <div className="text-[11px] text-ink/60 mb-4">Add fields to build your form</div>
           <button
             onClick={() => setAdding(true)}
             className="flex items-center gap-1.5 bg-ink text-paper px-4 py-2 font-display font-semibold text-[11px] tracking-widest uppercase hover:bg-ink/80 transition-all"
@@ -1034,7 +1102,7 @@ function FieldsTab({ formId, toast }: { formId: string; toast: (m: string) => vo
           onDragLeave={handleDragLeave}
           onDrop={(e) => handleDrop(e, field.id)}
           onDragEnd={handleDragEnd}
-          className={`relative bg-white border border-ink/10 transition-opacity ${
+          className={`relative bg-surface border border-ink/10 transition-opacity ${
             draggedId === field.id ? "opacity-40" : ""
           } ${
             dragOverInfo?.id === field.id && dragOverInfo.position === "before"
@@ -1050,20 +1118,20 @@ function FieldsTab({ formId, toast }: { formId: string; toast: (m: string) => vo
             <div className="p-4 space-y-3">
               <div className="flex gap-3">
                 <div className="flex-1">
-                  <label className="font-mono text-[9px] tracking-widest uppercase text-ink/40 block mb-1">Label</label>
+                  <label className="font-mono text-[9px] tracking-widest uppercase text-ink/60 block mb-1">Label</label>
                   <input
                     value={editLabel}
                     onChange={(e) => setEditLabel(e.target.value.slice(0, 100))}
                     autoFocus
-                    className="w-full border border-ink/20 bg-white px-3 py-1.5 text-sm font-display focus:outline-none focus:border-ink"
+                    className="w-full border border-ink/20 bg-surface px-3 py-1.5 text-sm font-display focus:outline-none focus:border-ink"
                   />
                 </div>
                 <div>
-                  <label className="font-mono text-[9px] tracking-widest uppercase text-ink/40 block mb-1">Type</label>
+                  <label className="font-mono text-[9px] tracking-widest uppercase text-ink/60 block mb-1">Type</label>
                   <select
                     value={editType}
                     onChange={(e) => setEditType(e.target.value as FieldType)}
-                    className="border border-ink/20 px-3 py-1.5 text-sm font-display bg-white focus:outline-none focus:border-ink"
+                    className="border border-ink/20 px-3 py-1.5 text-sm font-display bg-surface focus:outline-none focus:border-ink"
                   >
                     {FIELD_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                   </select>
@@ -1085,7 +1153,7 @@ function FieldsTab({ formId, toast }: { formId: string; toast: (m: string) => vo
           ) : (
             <div className="flex items-center gap-3 px-4 py-3">
               <span
-                className="text-ink/30 hover:text-ink cursor-grab active:cursor-grabbing select-none"
+                className="text-ink/50 hover:text-ink cursor-grab active:cursor-grabbing select-none"
                 aria-label="Drag to reorder"
                 title="Drag to reorder"
               >
@@ -1097,18 +1165,18 @@ function FieldsTab({ formId, toast }: { formId: string; toast: (m: string) => vo
               <div className="flex-1 min-w-0">
                 <span className="font-display font-semibold text-sm">{field.label}</span>
                 {field.isRequired && (
-                  <span className="ml-2 font-mono text-[9px] tracking-widest uppercase text-red-500">required</span>
+                  <span className="ml-2 font-mono text-[9px] tracking-widest uppercase text-red-700 dark:text-red-400">required</span>
                 )}
               </div>
               <div className="flex gap-1 flex-shrink-0">
                 <button
                   onClick={() => { setEditingId(field.id); setEditLabel(field.label); setEditType(field.fieldType as FieldType); setEditRequired(field.isRequired); }}
-                  className="text-ink/35 hover:text-ink transition-colors p-1"
+                  className="text-ink/55 hover:text-ink transition-colors p-1"
                   aria-label="Edit field"
                 >
                   <i className="ti ti-edit" style={{ fontSize: 14 }} aria-hidden="true" />
                 </button>
-                <button onClick={() => handleDelete(field.id)} className="text-ink/35 hover:text-red-700 transition-colors p-1" aria-label="Delete field">
+                <button onClick={() => handleDelete(field.id)} className="text-ink/55 hover:text-red-700 dark:hover:text-red-400 transition-colors p-1" aria-label="Delete field">
                   <i className="ti ti-trash" style={{ fontSize: 14 }} aria-hidden="true" />
                 </button>
               </div>
@@ -1118,27 +1186,27 @@ function FieldsTab({ formId, toast }: { formId: string; toast: (m: string) => vo
       ))}
 
       {adding ? (
-        <div className="bg-white border border-ink/10 p-4 space-y-3">
-          <div className="font-mono text-[9px] tracking-widest uppercase text-ink/40">New field</div>
+        <div className="bg-surface border border-ink/10 p-4 space-y-3">
+          <div className="font-mono text-[9px] tracking-widest uppercase text-ink/60">New field</div>
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="font-mono text-[9px] tracking-widest uppercase text-ink/40 block mb-1">Label <span className="text-ink/60">*</span></label>
+              <label className="font-mono text-[9px] tracking-widest uppercase text-ink/60 block mb-1">Label <span className="text-ink/60">*</span></label>
               <input
                 value={newLabel}
                 onChange={(e) => setNewLabel(e.target.value.slice(0, 100))}
                 placeholder="e.g. Full name"
                 disabled={submitting}
                 autoFocus
-                className="w-full border border-ink/20 bg-white px-3 py-1.5 text-sm font-display placeholder:text-ink/25 focus:outline-none focus:border-ink disabled:opacity-50"
+                className="w-full border border-ink/20 bg-surface px-3 py-1.5 text-sm font-display placeholder:text-ink/60 focus:outline-none focus:border-ink disabled:opacity-50"
               />
             </div>
             <div>
-              <label className="font-mono text-[9px] tracking-widest uppercase text-ink/40 block mb-1">Type</label>
+              <label className="font-mono text-[9px] tracking-widest uppercase text-ink/60 block mb-1">Type</label>
               <select
                 value={newType}
                 onChange={(e) => setNewType(e.target.value as FieldType)}
                 disabled={submitting}
-                className="border border-ink/20 px-3 py-1.5 text-sm font-display bg-white focus:outline-none focus:border-ink disabled:opacity-50"
+                className="border border-ink/20 px-3 py-1.5 text-sm font-display bg-surface focus:outline-none focus:border-ink disabled:opacity-50"
               >
                 {FIELD_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
@@ -1159,9 +1227,9 @@ function FieldsTab({ formId, toast }: { formId: string; toast: (m: string) => vo
           </div>
         </div>
       ) : sorted.length > 0 && (
-        <button onClick={() => setAdding(true)} className="w-full border border-dashed border-ink/20 hover:border-ink hover:bg-ink/2 transition-all flex items-center justify-center gap-2 py-3">
+        <button onClick={() => setAdding(true)} className="w-full border border-dashed border-ink/20 hover:border-ink hover:bg-ink/4 transition-all flex items-center justify-center gap-2 py-3">
           <i className="ti ti-plus text-ink/35" style={{ fontSize: 15 }} aria-hidden="true" />
-          <span className="font-display font-semibold text-[11px] tracking-widest uppercase text-ink/40">Add field</span>
+          <span className="font-display font-semibold text-[11px] tracking-widest uppercase text-ink/60">Add field</span>
         </button>
       )}
     </div>
@@ -1189,7 +1257,7 @@ function SubmissionsTab({ formId }: { formId: string }) {
 
   if (isLoading) {
     return (
-      <div className="bg-white border border-ink/10 animate-pulse">
+      <div className="bg-surface border border-ink/10 animate-pulse">
         <div className="h-9 border-b border-ink/8 bg-ink/4" />
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="h-10 border-b border-ink/6 bg-ink/[0.02]" />
@@ -1200,31 +1268,31 @@ function SubmissionsTab({ formId }: { formId: string }) {
 
   if (!submissions || submissions.length === 0) {
     return (
-      <div className="bg-white border border-ink/10 flex flex-col items-center justify-center py-16 text-center">
+      <div className="bg-surface border border-ink/10 flex flex-col items-center justify-center py-16 text-center">
         <i className="ti ti-inbox text-ink/20 mb-3" style={{ fontSize: 32 }} aria-hidden="true" />
-        <div className="font-display font-semibold text-sm text-ink/40 mb-1">No responses yet</div>
-        <div className="text-[11px] text-ink/30">Submissions will appear here once the form is published and shared</div>
+        <div className="font-display font-semibold text-sm text-ink/70 mb-1">No responses yet</div>
+        <div className="text-[11px] text-ink/60">Submissions will appear here once the form is published and shared</div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white border border-ink/10 overflow-x-auto">
+    <div className="bg-surface border border-ink/10 overflow-x-auto">
       <table className="w-full text-[12px]" style={{ tableLayout: "auto" }}>
         <thead>
           <tr>
-            <th className="font-mono text-[9px] tracking-widest uppercase text-ink/40 text-left px-4 py-2.5 border-b border-ink/10 whitespace-nowrap w-8">
+            <th className="font-mono text-[9px] tracking-widest uppercase text-ink/60 text-left px-4 py-2.5 border-b border-ink/10 whitespace-nowrap w-8">
               #
             </th>
             {sortedFields.map((f) => (
               <th
                 key={f.id}
-                className="font-mono text-[9px] tracking-widest uppercase text-ink/40 text-left px-4 py-2.5 border-b border-ink/10 whitespace-nowrap"
+                className="font-mono text-[9px] tracking-widest uppercase text-ink/60 text-left px-4 py-2.5 border-b border-ink/10 whitespace-nowrap"
               >
                 {f.label}
               </th>
             ))}
-            <th className="font-mono text-[9px] tracking-widest uppercase text-ink/40 text-left px-4 py-2.5 border-b border-ink/10 whitespace-nowrap">
+            <th className="font-mono text-[9px] tracking-widest uppercase text-ink/60 text-left px-4 py-2.5 border-b border-ink/10 whitespace-nowrap">
               Submitted
             </th>
           </tr>
@@ -1235,18 +1303,18 @@ function SubmissionsTab({ formId }: { formId: string }) {
               (sub.value ?? []).map((v) => [v.formFieldId, v.value]),
             );
             return (
-              <tr key={sub.id} className="hover:bg-ink/2 border-b border-ink/6 last:border-b-0">
-                <td className="px-4 py-2.5 font-mono text-[10px] text-ink/30">{i + 1}</td>
+              <tr key={sub.id} className="hover:bg-ink/4 border-b border-ink/6 last:border-b-0">
+                <td className="px-4 py-2.5 font-mono text-[10px] text-ink/55">{i + 1}</td>
                 {sortedFields.map((f) => (
                   <td key={f.id} className="px-4 py-2.5 max-w-[220px]">
                     {valueMap[f.id] ? (
                       <span className="block truncate text-ink/80">{valueMap[f.id]}</span>
                     ) : (
-                      <span className="text-ink/25">—</span>
+                      <span className="text-ink/50">—</span>
                     )}
                   </td>
                 ))}
-                <td className="px-4 py-2.5 font-mono text-[10px] text-ink/35 whitespace-nowrap">
+                <td className="px-4 py-2.5 font-mono text-[10px] text-ink/60 whitespace-nowrap">
                   {formatDate(sub.createdAt)}
                 </td>
               </tr>
@@ -1255,7 +1323,7 @@ function SubmissionsTab({ formId }: { formId: string }) {
         </tbody>
       </table>
       <div className="px-4 py-2.5 border-t border-ink/6">
-        <span className="font-mono text-[9px] tracking-widest uppercase text-ink/35">
+        <span className="font-mono text-[9px] tracking-widest uppercase text-ink/60">
           {submissions.length} response{submissions.length !== 1 ? "s" : ""}
         </span>
       </div>
@@ -1311,20 +1379,20 @@ function OverviewTab({ form }: { form: Form }) {
 
   return (
     <>
-      <div className="grid grid-cols-4 gap-3 mb-4">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-4">
         <StatCard label="Total responses" value={String(form.responseCount)} sub="All time" color={form.responseCount > 0 ? "green" : undefined} />
         <StatCard label="This month" value={String(thisMonth)} sub={thisMonth > 0 ? "responses" : "No responses yet"} />
         <StatCard label="Fields" value={String(fields.length)} sub="In this form" />
-        <StatCard label="Status" value={form.status} />
+        <StatCard label="Status" value={form.status.charAt(0).toUpperCase() + form.status.slice(1)} />
       </div>
-      <div className="grid grid-cols-2 gap-4 mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <Panel title="Responses over time — last 30 days">
           {noData ? (
-            <div className="h-[64px] flex items-center justify-center text-[11px] text-ink/35 font-light">No responses yet</div>
+            <div className="h-[64px] flex items-center justify-center text-[11px] text-ink/60">No responses yet</div>
           ) : (
             <>
               <BarChart data={dailyData} height={64} />
-              <div className="flex justify-between mt-1 font-mono text-[8px] text-ink/30">
+              <div className="flex justify-between mt-1 font-mono text-[9px] text-ink/60">
                 {dateLabels.map((l) => <span key={l}>{l}</span>)}
               </div>
             </>
@@ -1332,7 +1400,7 @@ function OverviewTab({ form }: { form: Form }) {
         </Panel>
         <Panel title="Field completion rate">
           {fieldCompletion.length === 0 ? (
-            <div className="text-[11px] text-ink/35 font-light py-3 text-center">
+            <div className="text-[11px] text-ink/60 py-3 text-center">
               {noData ? "No responses yet" : "No fields"}
             </div>
           ) : (
@@ -1370,12 +1438,15 @@ function DetailView({
   const [dailyDigest, setDailyDigest] = useState(form?.dailyDigest ?? false);
   const [settingsSaving, setSettingsSaving] = useState(false);
 
+  // Re-seed the editable settings only when a different form is opened; depending on
+  // `form` itself would discard unsaved edits whenever the forms list refetches.
   useEffect(() => {
     if (!form) return;
     setVis(form.visibility);
     setMaxResponses(form.maxResponses != null ? String(form.maxResponses) : "");
     setEmailNotif(form.emailNotifications);
     setDailyDigest(form.dailyDigest);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form?.id]);
 
   const { updateFormSettingsAsync } = useUpdateFormSettings();
@@ -1407,7 +1478,7 @@ function DetailView({
 
   return (
     <div>
-      <div className="flex items-center gap-2 text-[11px] text-ink/40 mb-5">
+      <div className="flex items-center gap-2 text-[11px] text-ink/60 mb-5">
         <button onClick={onBack} className="hover:text-ink transition-colors cursor-pointer">
           My forms
         </button>
@@ -1421,7 +1492,7 @@ function DetailView({
           <h1 className="font-display font-black text-2xl tracking-tight mt-2 mb-1">
             {form?.title ?? "—"}
           </h1>
-          <div className="text-[11px] text-ink/40">
+          <div className="text-[11px] text-ink/60">
             Created {formatRelativeTime(form?.createdAt ?? null)} · Updated {formatRelativeTime(form?.updatedAt ?? null)}
           </div>
         </div>
@@ -1436,7 +1507,7 @@ function DetailView({
           {isPublished ? (
             <button
               onClick={() => form && onPublishToggle(form.id, "unpublished")}
-              className="flex items-center gap-1.5 bg-ink text-paper border border-ink px-3 py-1.5 font-display font-semibold text-[10px] tracking-widest uppercase hover:bg-ink/80 transition-all"
+              className="flex items-center gap-1.5 border border-ink/20 px-3 py-1.5 font-display font-semibold text-[10px] tracking-widest uppercase text-ink/70 hover:border-ink hover:text-ink transition-all"
             >
               <i className="ti ti-player-pause" style={{ fontSize: 13 }} aria-hidden="true" />
               Unpublish
@@ -1453,13 +1524,15 @@ function DetailView({
         </div>
       </div>
 
-      <div className="flex border-b border-ink/10 mb-5">
+      <div className="flex border-b border-ink/10 mb-5 overflow-x-auto" role="tablist">
         {(["overview", "fields", "responses", "settings"] as TabKey[]).map((t) => (
           <button
             key={t}
+            role="tab"
+            aria-selected={tab === t}
             onClick={() => setTab(t)}
-            className={`px-4 py-2.5 font-mono text-[10px] tracking-widest uppercase border-b-2 -mb-px transition-all ${
-              tab === t ? "text-ink border-ink" : "text-ink/40 border-transparent hover:text-ink"
+            className={`px-4 py-2.5 font-mono text-[10px] tracking-widest uppercase border-b-2 -mb-px transition-all whitespace-nowrap ${
+              tab === t ? "text-ink border-ink" : "text-ink/60 border-transparent hover:text-ink"
             }`}
           >
             {t}
@@ -1475,13 +1548,13 @@ function DetailView({
       {tab === "responses" && <SubmissionsTab formId={form?.id ?? ""} />}
 
       {tab === "settings" && (
-        <div className="bg-white border border-ink/10 p-5 max-w-lg">
-          <div className="font-mono text-[9px] tracking-widest uppercase text-ink/40 mb-5">
+        <div className="bg-surface border border-ink/10 p-5 max-w-lg">
+          <div className="font-mono text-[9px] tracking-widest uppercase text-ink/60 mb-5">
             Form settings
           </div>
           <div className="space-y-6">
             <div>
-              <div className="font-mono text-[9px] tracking-widest uppercase text-ink/40 mb-2">
+              <div className="font-mono text-[9px] tracking-widest uppercase text-ink/60 mb-2">
                 Visibility
               </div>
               <VisSelector
@@ -1491,12 +1564,12 @@ function DetailView({
                   if (form) onVisibilityChange(form.id, v);
                 }}
               />
-              <p className="text-[11px] text-ink/40 mt-2 font-light">
+              <p className="text-[11px] text-ink/60 mt-2">
                 Public forms are discoverable. Unlisted forms are accessible only via direct link.
               </p>
             </div>
             <div>
-              <div className="font-mono text-[9px] tracking-widest uppercase text-ink/40 mb-2">
+              <div className="font-mono text-[9px] tracking-widest uppercase text-ink/60 mb-2">
                 Close form after
               </div>
               <div className="flex items-center gap-2">
@@ -1508,12 +1581,12 @@ function DetailView({
                   placeholder="Unlimited"
                   className="w-28 border border-ink/20 px-3 py-1.5 font-display font-bold text-sm focus:outline-none focus:border-ink"
                 />
-                <span className="text-sm text-ink/50">responses</span>
+                <span className="text-sm text-ink/70">responses</span>
               </div>
-              <p className="text-[11px] text-ink/40 mt-1.5 font-light">Leave blank for unlimited responses.</p>
+              <p className="text-[11px] text-ink/60 mt-1.5">Leave blank for unlimited responses.</p>
             </div>
             <div>
-              <div className="font-mono text-[9px] tracking-widest uppercase text-ink/40 mb-3">
+              <div className="font-mono text-[9px] tracking-widest uppercase text-ink/60 mb-3">
                 Notifications
               </div>
               <div className="space-y-0">
@@ -1544,6 +1617,12 @@ function DetailView({
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
+const NAV_ITEMS = [
+  { key: "forms", icon: "ti-layout-grid", label: "My forms" },
+  { key: "analytics", icon: "ti-chart-bar", label: "Analytics" },
+  { key: "responses", icon: "ti-inbox", label: "Responses" },
+] as const;
+
 function Sidebar({
   active,
   onChange,
@@ -1561,32 +1640,24 @@ function Sidebar({
     .join("")
     .slice(0, 2) ?? "—";
 
-  const nav = [
-    { key: "forms" as ViewKey, icon: "ti-layout-grid", label: "My forms", badge: formsCount > 0 ? String(formsCount) : "" },
-    { key: "analytics" as ViewKey, icon: "ti-chart-bar", label: "Analytics", badge: "" },
-    { key: "responses" as ViewKey, icon: "ti-inbox", label: "Responses", badge: "" },
-  ];
-
   return (
-    <aside className="w-[220px] flex-shrink-0 bg-ink text-paper flex flex-col">
-      <div className="px-5 py-5 border-b border-paper/8 flex items-center gap-2">
-        <span className="font-display font-black text-[15px] tracking-tight">Go</span>
-        <span className="border border-paper/25 font-mono text-[8px] tracking-widest uppercase px-1.5 py-0.5 text-paper/60">
-          Form
-        </span>
+    <aside className="hidden md:flex w-[220px] flex-shrink-0 bg-shell text-shell-fg flex-col border-r border-shell-fg/10">
+      <div className="px-5 py-5 border-b border-shell-fg/8">
+        <Logo size={15} />
       </div>
-      <div className="pt-3 flex-1">
-        <div className="px-3 pb-1 font-mono text-[9px] tracking-widest uppercase text-paper/30">
+      <nav className="pt-3 flex-1" aria-label="Dashboard">
+        <div className="px-3 pb-1 font-mono text-[9px] tracking-widest uppercase text-shell-fg/55">
           Workspace
         </div>
-        {nav.map((n) => (
+        {NAV_ITEMS.map((n) => (
           <button
             key={n.key}
             onClick={() => onChange(n.key)}
+            aria-current={active === n.key ? "page" : undefined}
             className={`w-full flex items-center gap-2.5 px-3 py-2 mx-0 text-[13px] transition-all rounded-[4px] mb-0.5 ${
               active === n.key
-                ? "bg-paper/12 text-paper font-medium"
-                : "text-paper/60 hover:bg-paper/8 hover:text-paper"
+                ? "bg-shell-fg/12 text-shell-fg font-medium"
+                : "text-shell-fg/60 hover:bg-shell-fg/8 hover:text-shell-fg"
             }`}
           >
             <i
@@ -1595,57 +1666,71 @@ function Sidebar({
               aria-hidden="true"
             />
             <span className="flex-1 text-left">{n.label}</span>
-            {n.badge && (
-              <span className="font-mono text-[9px] bg-paper/15 px-1.5 py-0.5 rounded-[3px]">
-                {n.badge}
+            {n.key === "forms" && formsCount > 0 && (
+              <span className="font-mono text-[9px] bg-shell-fg/15 px-1.5 py-0.5 rounded-[3px]">
+                {formsCount}
               </span>
             )}
           </button>
         ))}
-        <div className="px-3 py-3 mt-1 font-mono text-[9px] tracking-widest uppercase text-paper/30">
+        <div className="px-3 py-3 mt-1 font-mono text-[9px] tracking-widest uppercase text-shell-fg/55">
           Discover
         </div>
         <Link
           href="/explore"
-          className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-paper/55 hover:bg-paper/8 hover:text-paper transition-all mb-0.5"
+          className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-shell-fg/60 hover:bg-shell-fg/8 hover:text-shell-fg transition-all mb-0.5"
         >
           <i className="ti ti-world" style={{ fontSize: 15 }} aria-hidden="true" />
           Explore forms
         </Link>
-        <div className="px-3 py-3 mt-1 font-mono text-[9px] tracking-widest uppercase text-paper/30">
-          Account
-        </div>
-        {[
-          { icon: "ti-settings", label: "Settings" },
-        ].map((n) => (
-          <button
-            key={n.label}
-            className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-paper/55 hover:bg-paper/8 hover:text-paper transition-all mb-0.5"
-          >
-            <i className={`ti ${n.icon}`} style={{ fontSize: 15 }} aria-hidden="true" />
-            {n.label}
-          </button>
-        ))}
-      </div>
-      <div className="p-3 border-t border-paper/8">
-        <div className="flex items-center gap-2.5 p-2 rounded-[4px] hover:bg-paper/8 cursor-pointer transition-all">
-          <div className="w-8 h-8 rounded-full bg-paper/15 flex items-center justify-center font-display font-bold text-[11px] text-paper flex-shrink-0">
+      </nav>
+      <div className="p-3 border-t border-shell-fg/8">
+        <div className="flex items-center gap-2.5 p-2">
+          <div className="w-8 h-8 rounded-full bg-shell-fg/15 flex items-center justify-center font-display font-bold text-[11px] text-shell-fg flex-shrink-0">
             {initials}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-[12px] font-medium text-paper truncate">{user?.fullName ?? "—"}</div>
-            <div className="font-mono text-[9px] text-paper/35 uppercase tracking-widest truncate">
+            <div className="text-[12px] font-medium text-shell-fg truncate">{user?.fullName ?? "—"}</div>
+            <div className="font-mono text-[9px] text-shell-fg/55 uppercase tracking-widest truncate">
               {user?.email ?? ""}
             </div>
           </div>
-          <i
-            className="ti ti-chevron-down text-paper/30"
-            style={{ fontSize: 13 }}
-            aria-hidden="true"
-          />
         </div>
       </div>
     </aside>
+  );
+}
+
+function MobileNav({ active, onChange }: { active: ViewKey; onChange: (v: ViewKey) => void }) {
+  return (
+    <nav
+      className="md:hidden bg-shell text-shell-fg flex items-center gap-1 px-3 py-2 overflow-x-auto shrink-0"
+      aria-label="Dashboard"
+    >
+      <span className="pr-2 flex-shrink-0 flex items-center">
+        <LogoMark size={18} />
+      </span>
+      {NAV_ITEMS.map((n) => (
+        <button
+          key={n.key}
+          onClick={() => onChange(n.key)}
+          aria-current={active === n.key ? "page" : undefined}
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-[12px] rounded-[4px] whitespace-nowrap transition-all ${
+            active === n.key ? "bg-shell-fg/12 text-shell-fg font-medium" : "text-shell-fg/60 hover:text-shell-fg"
+          }`}
+        >
+          <i className={`ti ${n.icon}`} style={{ fontSize: 14 }} aria-hidden="true" />
+          {n.label}
+        </button>
+      ))}
+      <Link
+        href="/explore"
+        className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] text-shell-fg/60 hover:text-shell-fg whitespace-nowrap transition-all"
+      >
+        <i className="ti ti-world" style={{ fontSize: 14 }} aria-hidden="true" />
+        Explore
+      </Link>
+    </nav>
   );
 }
 
@@ -1678,19 +1763,26 @@ function NewFormModal({
     }
   };
 
+  useEscape(onClose);
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-paper border border-ink/20 shadow-[6px_6px_0_rgba(17,24,39,0.10)] w-full max-w-md mx-4">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="new-form-title"
+        className="bg-paper border border-ink/20 shadow-[6px_6px_0_rgba(17,24,39,0.10)] dark:shadow-[6px_6px_0_rgba(0,0,0,0.5)] w-full max-w-md mx-4"
+      >
         <div className="flex items-center justify-between px-5 py-4 border-b border-ink/10">
-          <span className="font-display font-bold text-sm tracking-tight">New form</span>
+          <span id="new-form-title" className="font-display font-bold text-sm tracking-tight">New form</span>
           <button
             onClick={onClose}
-            className="text-ink/40 hover:text-ink transition-colors"
+            className="text-ink/55 hover:text-ink transition-colors"
             aria-label="Close"
           >
             <i className="ti ti-x" style={{ fontSize: 16 }} aria-hidden="true" />
@@ -1700,10 +1792,10 @@ function NewFormModal({
         <form onSubmit={handleSubmit} className="px-5 py-5 space-y-5">
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="font-mono text-[9px] tracking-widest uppercase text-ink/40">
+              <label className="font-mono text-[9px] tracking-widest uppercase text-ink/60">
                 Title <span className="text-ink/60">*</span>
               </label>
-              <span className="font-mono text-[9px] text-ink/30">{title.length}/55</span>
+              <span className="font-mono text-[9px] text-ink/60">{title.length}/55</span>
             </div>
             <input
               type="text"
@@ -1712,17 +1804,17 @@ function NewFormModal({
               placeholder="e.g. Customer feedback survey"
               disabled={submitting}
               autoFocus
-              className="w-full border border-ink/20 bg-white px-3 py-2 text-sm font-display placeholder:text-ink/25 focus:outline-none focus:border-ink transition-colors disabled:opacity-50"
+              className="w-full border border-ink/20 bg-surface px-3 py-2 text-sm font-display placeholder:text-ink/60 focus:outline-none focus:border-ink transition-colors disabled:opacity-50"
             />
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="font-mono text-[9px] tracking-widest uppercase text-ink/40">
+              <label className="font-mono text-[9px] tracking-widest uppercase text-ink/60">
                 Description{" "}
-                <span className="normal-case tracking-normal text-ink/30">(optional)</span>
+                <span className="normal-case tracking-normal text-ink/60">(optional)</span>
               </label>
-              <span className="font-mono text-[9px] text-ink/30">{description.length}/300</span>
+              <span className="font-mono text-[9px] text-ink/60">{description.length}/300</span>
             </div>
             <textarea
               value={description}
@@ -1730,12 +1822,12 @@ function NewFormModal({
               placeholder="Short description of what this form is for…"
               disabled={submitting}
               rows={3}
-              className="w-full border border-ink/20 bg-white px-3 py-2 text-sm font-display placeholder:text-ink/25 focus:outline-none focus:border-ink transition-colors resize-none disabled:opacity-50"
+              className="w-full border border-ink/20 bg-surface px-3 py-2 text-sm font-display placeholder:text-ink/60 focus:outline-none focus:border-ink transition-colors resize-none disabled:opacity-50"
             />
           </div>
 
           {submitError && (
-            <div className="font-mono text-[10px] text-red-700 border border-red-200 bg-red-50 px-3 py-2">
+            <div className="font-mono text-[10px] text-red-700 border border-red-200 bg-red-50 dark:text-red-300 dark:border-red-900 dark:bg-red-950/40 px-3 py-2">
               {submitError}
             </div>
           )}
@@ -1777,6 +1869,65 @@ function NewFormModal({
   );
 }
 
+// ─── Confirm dialog ───────────────────────────────────────────────────────────
+
+function ConfirmDialog({
+  title,
+  body,
+  confirmLabel,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  title: string;
+  body: string;
+  confirmLabel: string;
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  useEscape(onCancel);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !busy) onCancel();
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirm-title"
+        className="bg-paper border border-ink/20 shadow-[6px_6px_0_rgba(17,24,39,0.10)] dark:shadow-[6px_6px_0_rgba(0,0,0,0.5)] w-full max-w-sm mx-4 p-5"
+      >
+        <div id="confirm-title" className="font-display font-bold text-sm tracking-tight mb-2">
+          {title}
+        </div>
+        <p className="text-[12px] text-ink/70 mb-5">{body}</p>
+        <div className="flex gap-2">
+          <button
+            onClick={onCancel}
+            disabled={busy}
+            autoFocus
+            className="flex-1 border border-ink/20 px-4 py-2 font-display font-semibold text-[11px] tracking-widest uppercase text-ink/60 hover:border-ink/40 hover:text-ink transition-all disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={busy}
+            className="flex-1 bg-red-700 text-white px-4 py-2 font-display font-semibold text-[11px] tracking-widest uppercase hover:bg-red-800 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {busy && <i className="ti ti-loader-2 animate-spin" style={{ fontSize: 12 }} aria-hidden="true" />}
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── App ──────────────────────────────────────────────────────────────────────
 
 const VIEW_TITLES: Record<ViewKey, string> = {
@@ -1791,6 +1942,9 @@ export default function Dashboard() {
   const [selectedFormId, setSelectedFormId] = useState<string | null>(null);
   const [detailInitialTab, setDetailInitialTab] = useState<TabKey | undefined>(undefined);
   const [showNewForm, setShowNewForm] = useState(false);
+  const [search, setSearch] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; title: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const { msg, visible, toast } = useToast();
   const { forms = [] } = useListForms();
   const { user } = useUser();
@@ -1828,48 +1982,89 @@ export default function Dashboard() {
     setView("detail");
   };
 
-  const handleDeleteForm = async (id: string, title: string) => {
+  const openFormResponses = (id: string) => {
+    setSelectedFormId(id);
+    setDetailInitialTab("responses");
+    setView("detail");
+  };
+
+  const requestDeleteForm = (id: string, title: string) => setPendingDelete({ id, title });
+
+  const confirmDeleteForm = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
     try {
-      await deleteFormAsync({ id });
-      if (selectedFormId === id) {
+      await deleteFormAsync({ id: pendingDelete.id });
+      if (selectedFormId === pendingDelete.id) {
         setSelectedFormId(null);
         setView("forms");
       }
-      toast(`"${title}" deleted`);
+      toast(`"${pendingDelete.title}" deleted`);
+      setPendingDelete(null);
     } catch (err) {
       toast(err instanceof Error ? err.message : "Failed to delete form");
+    } finally {
+      setDeleting(false);
     }
   };
 
+  const activeNav: ViewKey = view === "detail" ? "forms" : view;
+
   return (
     <div
-      className="flex min-h-screen"
-      style={{ fontFamily: "'Roboto', sans-serif", background: "#F5F4F0", color: "#111827" }}
+      className="dash flex min-h-screen bg-canvas text-ink transition-colors"
+      style={{ fontFamily: "'Roboto', sans-serif" }}
     >
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;900&family=Roboto:wght@300;400;500&family=PT+Mono&display=swap');
         @import url('https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.36.0/dist/tabler-icons.min.css');
         .font-display { font-family: 'Montserrat', sans-serif; }
         .font-mono    { font-family: 'PT Mono', monospace; }
-        ::selection   { background: #111827; color: #FAFAF8; }
+        .dash ::selection { background: var(--ink); color: var(--paper); }
+        .dash :is(button, a, input, select, textarea, [role="switch"]):focus-visible {
+          outline: 2px solid var(--ink);
+          outline-offset: 2px;
+        }
+        .dash aside :is(button, a):focus-visible,
+        .dash nav.bg-shell :is(button, a):focus-visible {
+          outline-color: #FAFAF8;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .dash *, .dash *::before, .dash *::after {
+            transition-duration: 0.01ms !important;
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+          }
+        }
       `}</style>
 
-      <Sidebar active={view} onChange={setView} formsCount={forms.length} user={user} />
+      <Sidebar active={activeNav} onChange={setView} formsCount={forms.length} user={user} />
 
       <div className="flex-1 flex flex-col min-w-0">
-        <div className="bg-paper border-b border-ink/10 px-7 h-13 flex items-center justify-between shrink-0">
-          <span className="font-display font-bold text-base tracking-tight">
+        <MobileNav active={activeNav} onChange={setView} />
+        <div className="bg-paper border-b border-ink/10 px-4 md:px-7 h-13 flex items-center justify-between gap-3 shrink-0">
+          <span className="font-display font-bold text-base tracking-tight truncate">
             {VIEW_TITLES[view]}
           </span>
           <div className="flex items-center gap-3">
-            <ThemeToggle />
-            <div className="flex items-center gap-2 border border-ink/15 bg-white px-3 py-1.5 text-[12px] text-ink/40">
-              <i className="ti ti-search" style={{ fontSize: 14 }} aria-hidden="true" />
-              Search forms…
-            </div>
+            <ThemeToggle className="h-8 w-8" />
+            <label className="hidden sm:flex items-center gap-2 border border-ink/15 bg-surface px-3 py-1.5 focus-within:border-ink/50 transition-colors cursor-text">
+              <i className="ti ti-search text-ink/55" style={{ fontSize: 14 }} aria-hidden="true" />
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  if (e.target.value && view !== "forms") setView("forms");
+                }}
+                placeholder="Search forms…"
+                aria-label="Search forms"
+                className="w-36 lg:w-44 bg-transparent text-[12px] text-ink placeholder:text-ink/60 focus:outline-none"
+              />
+            </label>
             <button
               onClick={() => setShowNewForm(true)}
-              className="flex items-center gap-1.5 bg-ink text-paper px-4 py-2 font-display font-semibold text-[11px] tracking-widest uppercase hover:bg-ink/80 transition-all"
+              className="flex items-center gap-1.5 bg-ink text-paper px-4 py-2 font-display font-semibold text-[11px] tracking-widest uppercase hover:bg-ink/80 transition-all whitespace-nowrap"
             >
               <i className="ti ti-plus" style={{ fontSize: 14 }} aria-hidden="true" />
               New form
@@ -1877,12 +2072,14 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <main className="flex-1 p-7 overflow-y-auto">
+        <main className="flex-1 p-4 md:p-7 overflow-y-auto">
           {view === "forms" && (
             <FormsView
+              search={search}
+              onClearSearch={() => setSearch("")}
               onViewDetail={openFormDetail}
               onEditFields={openFormFields}
-              onDelete={handleDeleteForm}
+              onDelete={requestDeleteForm}
               onNewForm={() => setShowNewForm(true)}
               onPublishToggle={handlePublishToggle}
               onVisibilityChange={handleVisibilityChange}
@@ -1890,7 +2087,9 @@ export default function Dashboard() {
             />
           )}
           {view === "analytics" && <AnalyticsView />}
-          {view === "responses" && <ResponsesView forms={forms} toast={toast} />}
+          {view === "responses" && (
+            <ResponsesView forms={forms} toast={toast} onOpenForm={openFormResponses} />
+          )}
           {view === "detail" && (
             <DetailView
               form={forms.find((f) => f.id === selectedFormId) ?? null}
@@ -1915,22 +2114,24 @@ export default function Dashboard() {
         />
       )}
 
+      {pendingDelete && (
+        <ConfirmDialog
+          title={`Delete "${pendingDelete.title}"?`}
+          body="This permanently deletes the form and all of its responses. This can't be undone."
+          confirmLabel="Delete form"
+          busy={deleting}
+          onCancel={() => setPendingDelete(null)}
+          onConfirm={() => void confirmDeleteForm()}
+        />
+      )}
+
       <div
+        role="status"
+        aria-live="polite"
+        className="fixed bottom-6 left-1/2 z-[100] bg-ink text-paper font-mono text-[11px] tracking-wide px-5 py-2.5 pointer-events-none transition-all duration-200"
         style={{
-          position: "fixed",
-          bottom: 24,
-          left: "50%",
           transform: `translateX(-50%) translateY(${visible ? 0 : 60}px)`,
-          background: "#111827",
-          color: "#FAFAF8",
-          fontFamily: "'PT Mono', monospace",
-          fontSize: 11,
-          letterSpacing: "0.06em",
-          padding: "9px 20px",
           opacity: visible ? 1 : 0,
-          transition: "all 0.25s",
-          pointerEvents: "none",
-          zIndex: 100,
         }}
       >
         {msg}

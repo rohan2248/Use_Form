@@ -13,7 +13,7 @@ import { GlobalProviders } from "~/providers/global";
 // });
 
 export const metadata: Metadata = {
-  title: "Go Form",
+  title: "Use Form",
   description: "Build and share forms effortlessly.",
 };
 

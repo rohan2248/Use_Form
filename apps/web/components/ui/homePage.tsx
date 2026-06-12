@@ -2,12 +2,12 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { ThemeToggle } from "~/components/ui/theme-toggle";
+import { Logo } from "~/components/ui/logo";
 
 const NAV_LINKS = [
   { label: "Features", href: "#features" },
   { label: "How it works", href: "#how-it-works" },
   { label: "Pricing", href: "#pricing" },
-  { label: "Docs", href: "#docs" },
   { label: "Explore", href: "/explore" },
 ];
 
@@ -123,10 +123,26 @@ const TESTIMONIALS = [
   },
 ];
 
+function usePrefersReducedMotion() {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReduced(mq.matches);
+    const onChange = (e: MediaQueryListEvent) => setReduced(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+  return reduced;
+}
+
 function useInView(ref: React.RefObject<Element>, threshold = 0.15) {
   const [inView, setInView] = useState(false);
   useEffect(() => {
     if (!ref.current) return;
+    if (typeof IntersectionObserver === "undefined") {
+      setInView(true);
+      return;
+    }
     const obs = new IntersectionObserver(
       (entries) => {
         const e = entries[0];
@@ -135,7 +151,13 @@ function useInView(ref: React.RefObject<Element>, threshold = 0.15) {
       { threshold },
     );
     obs.observe(ref.current);
-    return () => obs.disconnect();
+    // safety net: never leave content hidden if the observer doesn't fire
+    // (hidden tabs, headless renderers, print)
+    const fallback = setTimeout(() => setInView(true), 2500);
+    return () => {
+      obs.disconnect();
+      clearTimeout(fallback);
+    };
   }, [ref, threshold]);
   return inView;
 }
@@ -151,14 +173,18 @@ function FadeIn({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref as React.RefObject<Element>);
+  const reduced = usePrefersReducedMotion();
+  const visible = inView || reduced;
   return (
     <div
       ref={ref}
       className={className}
       style={{
-        opacity: inView ? 1 : 0,
-        transform: inView ? "translateY(0)" : "translateY(24px)",
-        transition: `opacity 0.7s ease ${delay}ms, transform 0.7s ease ${delay}ms`,
+        opacity: visible ? 1 : 0,
+        transform: visible ? "translateY(0)" : "translateY(24px)",
+        transition: reduced
+          ? "none"
+          : `opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1) ${delay}ms, transform 0.7s cubic-bezier(0.22, 1, 0.36, 1) ${delay}ms`,
       }}
     >
       {children}
@@ -168,205 +194,346 @@ function FadeIn({
 
 export default function App() {
   const [activeNav, setActiveNav] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [billingAnnual, setBillingAnnual] = useState(false);
   const [hoveredPricing, setHoveredPricing] = useState<number | null>(null);
 
   useEffect(() => {
     const onScroll = () => setActiveNav(window.scrollY > 40);
-    window.addEventListener("scroll", onScroll);
+    window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   const annualPrice = (p: string) => (p === "0" ? "0" : Math.round(parseInt(p) * 0.8).toString());
 
   return (
-    <div
-      style={{ fontFamily: "'Roboto', sans-serif", backgroundColor: "#FAFAF8", color: "#111827" }}
-      className="min-h-screen"
-    >
-      {/* Google Fonts */}
+    <div className="gfl min-h-screen">
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+      {/* eslint-disable-next-line @next/next/no-page-custom-font -- app router; React 19 hoists this to <head> */}
+      <link
+        rel="stylesheet"
+        precedence="default"
+        href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;900&family=Roboto:wght@300;400&family=PT+Mono&display=swap"
+      />
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;700;900&family=Roboto:wght@300;400;500&family=PT+Mono&display=swap');
-        * { box-sizing: border-box; }
-        ::selection { background: #111827; color: #FAFAF8; }
-        .paper-grain {
+        .gfl {
+          --ink: #111827;
+          --paper: #FAFAF8;
+          --raised: #FFFFFF;
+          --alt: #F5F4F0;
+          --deep-bg: #111827;
+          --deep-ink: #FAFAF8;
+          --green: #15803D;
+          font-family: 'Roboto', sans-serif;
+          background-color: var(--paper);
+          color: var(--ink);
+        }
+        .dark .gfl {
+          --ink: #F2F3EE;
+          --paper: #111827;
+          --raised: #19202E;
+          --alt: #0D121C;
+          --deep-bg: #0B0F17;
+          --deep-ink: #F2F3EE;
+          --green: #4ADE80;
+        }
+        .gfl * { box-sizing: border-box; }
+        .gfl ::selection { background: var(--ink); color: var(--paper); }
+        @media (prefers-reduced-motion: no-preference) {
+          html:has(.gfl) { scroll-behavior: smooth; }
+        }
+        .gfl :is(a, button):focus-visible {
+          outline: 2px solid var(--ink);
+          outline-offset: 3px;
+        }
+        .gfl section[id] { scroll-margin-top: 84px; }
+
+        .gfl .paper-grain {
           position: fixed; inset: 0; pointer-events: none; z-index: 0;
           background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
           background-size: 200px 200px;
           opacity: 0.5;
         }
-        .ruled-bg {
+        .gfl .ruled-bg {
           background-image: repeating-linear-gradient(
             to bottom,
             transparent,
             transparent 31px,
-            rgba(17,24,39,0.06) 31px,
-            rgba(17,24,39,0.06) 32px
+            color-mix(in srgb, var(--ink) 6%, transparent) 31px,
+            color-mix(in srgb, var(--ink) 6%, transparent) 32px
           );
         }
-        .ink-btn {
-          background: #111827; color: #FAFAF8;
-          border: 1px solid #111827;
+        .gfl .ink-btn {
+          background: var(--ink); color: var(--paper);
+          border: 1px solid var(--ink);
           padding: 12px 28px;
           font-family: 'Montserrat', sans-serif;
           font-weight: 500; font-size: 13px; letter-spacing: 0.08em;
           text-transform: uppercase; cursor: pointer;
           transition: background 0.2s, color 0.2s, transform 0.15s;
           display: inline-block;
+          text-decoration: none;
+          text-align: center;
         }
-        .ink-btn:hover { background: #2d3748; transform: translateY(-1px); }
-        .ghost-btn {
-          background: transparent; color: #111827;
-          border: 1px solid #111827;
+        .gfl .ink-btn:hover {
+          background: color-mix(in srgb, var(--ink) 86%, var(--paper));
+          transform: translateY(-1px);
+        }
+        .gfl .ghost-btn {
+          background: transparent; color: var(--ink);
+          border: 1px solid var(--ink);
           padding: 11px 28px;
           font-family: 'Montserrat', sans-serif;
           font-weight: 500; font-size: 13px; letter-spacing: 0.08em;
           text-transform: uppercase; cursor: pointer;
           transition: background 0.2s, color 0.2s, transform 0.15s;
           display: inline-block;
+          text-decoration: none;
+          text-align: center;
         }
-        .ghost-btn:hover { background: #111827; color: #FAFAF8; transform: translateY(-1px); }
-        .stamp {
+        .gfl .ghost-btn:hover { background: var(--ink); color: var(--paper); transform: translateY(-1px); }
+        .gfl .stamp {
           display: inline-block;
-          border: 2px solid #111827;
+          border: 2px solid var(--ink);
           padding: 2px 10px;
           font-family: 'PT Mono', monospace;
           font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
         }
-        .rule-top { border-top: 1px solid rgba(17,24,39,0.15); }
-        .rule-bottom { border-bottom: 1px solid rgba(17,24,39,0.15); }
-        .section-num {
+        .gfl .section-num {
           font-family: 'PT Mono', monospace;
-          font-size: 11px; letter-spacing: 0.1em; color: rgba(17,24,39,0.35);
+          font-size: 11px; letter-spacing: 0.1em;
+          color: color-mix(in srgb, var(--ink) 65%, transparent);
         }
-        .large-display {
+        .gfl .large-display {
           font-family: 'Montserrat', sans-serif;
-          font-weight: 900; line-height: 1.0;
+          font-weight: 900; line-height: 1.05;
           letter-spacing: -0.03em;
+          text-wrap: balance;
+          overflow-wrap: break-word;
         }
-        .toggle-track {
-          width: 44px; height: 24px;
-          background: #111827; border-radius: 12px;
-          position: relative; cursor: pointer;
-          transition: background 0.2s;
-          flex-shrink: 0;
+        .gfl .body-muted { color: color-mix(in srgb, var(--ink) 72%, transparent); }
+        .gfl .label-muted { color: color-mix(in srgb, var(--ink) 65%, transparent); }
+        .gfl .mono-label {
+          font-family: 'PT Mono', monospace;
+          font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
         }
-        .toggle-thumb {
-          position: absolute; top: 3px;
-          width: 18px; height: 18px;
-          background: #FAFAF8; border-radius: 50%;
-          transition: left 0.2s;
+
+        .gfl .nav-bar {
+          position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+          padding: 0 5vw;
+          background-color: transparent;
+          border-bottom: 1px solid transparent;
+          transition: background-color 0.3s ease, border-color 0.3s ease;
         }
-        .feature-card {
-          border: 1px solid rgba(17,24,39,0.12);
-          background: #FFFFFF;
+        .gfl .nav-bar.scrolled, .gfl .nav-bar.open {
+          background-color: color-mix(in srgb, var(--paper) 94%, transparent);
+          border-bottom: 1px solid color-mix(in srgb, var(--ink) 10%, transparent);
+          backdrop-filter: blur(8px);
+        }
+        .gfl .nav-inner {
+          max-width: 1200px; margin: 0 auto;
+          display: flex; align-items: center; justify-content: space-between;
+          height: 64px;
+        }
+        .gfl .nav-logo {
+          display: flex; align-items: center; gap: 8px;
+          color: var(--ink); text-decoration: none;
+        }
+        .gfl .nav-links { display: flex; gap: 32px; align-items: center; }
+        .gfl .nav-link {
+          font-family: 'Montserrat', sans-serif;
+          font-size: 12px; font-weight: 500; letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: color-mix(in srgb, var(--ink) 70%, transparent);
+          text-decoration: none;
+          padding: 8px 0;
+          transition: color 0.2s;
+        }
+        .gfl .nav-link:hover { color: var(--ink); }
+        .gfl .menu-btn {
+          display: none;
+          width: 44px; height: 44px;
+          background: transparent; border: none; cursor: pointer;
+          flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+          padding: 0;
+        }
+        .gfl .menu-btn span {
+          display: block; width: 22px; height: 2px;
+          background: var(--ink);
+          transition: transform 0.2s ease, opacity 0.2s ease;
+        }
+        .gfl .menu-btn[aria-expanded="true"] span:first-child { transform: translateY(4px) rotate(45deg); }
+        .gfl .menu-btn[aria-expanded="true"] span:last-child { transform: translateY(-4px) rotate(-45deg); }
+        .gfl .mobile-panel {
+          display: none;
+          flex-direction: column;
+          padding: 8px 5vw 24px;
+          border-bottom: 1px solid color-mix(in srgb, var(--ink) 10%, transparent);
+          background-color: color-mix(in srgb, var(--paper) 97%, transparent);
+          backdrop-filter: blur(8px);
+        }
+        .gfl .mobile-panel .nav-link {
+          padding: 14px 0;
+          font-size: 13px;
+          border-bottom: 1px solid color-mix(in srgb, var(--ink) 8%, transparent);
+        }
+        .gfl .mobile-panel .ink-btn { margin-top: 16px; }
+        @media (max-width: 880px) {
+          .gfl .nav-links .nav-link { display: none; }
+          .gfl .nav-links .ink-btn { display: none; }
+          .gfl .menu-btn { display: flex; }
+          .gfl .mobile-panel.open { display: flex; }
+        }
+
+        .gfl .hero-card {
+          position: absolute;
+          right: 5vw; top: 50%;
+          transform: translateY(-50%);
+          width: 320px; height: 400px;
+          border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+          background-color: var(--raised);
+          padding: 24px;
+          box-shadow: 8px 8px 0 color-mix(in srgb, var(--ink) 8%, transparent);
+          display: none;
+        }
+        @media (min-width: 1280px) { .gfl .hero-card { display: block; } }
+
+        .gfl .feature-card {
+          border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+          background: var(--raised);
           padding: 28px 24px;
+          height: 100%;
           transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
         }
-        .feature-card:hover {
-          border-color: #111827;
-          box-shadow: 4px 4px 0 #111827;
+        .gfl .feature-card:hover {
+          border-color: var(--ink);
+          box-shadow: 4px 4px 0 var(--ink);
           transform: translate(-2px, -2px);
         }
-        .pricing-card {
-          border: 1px solid rgba(17,24,39,0.12);
-          background: #FFFFFF;
+        .gfl .pricing-card {
+          border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+          background: var(--raised);
           padding: 36px 32px;
           transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
           position: relative;
         }
-        .pricing-card.active {
-          border: 2px solid #111827;
-          box-shadow: 6px 6px 0 #111827;
+        .gfl .pricing-card.active {
+          border: 2px solid var(--ink);
+          box-shadow: 6px 6px 0 var(--ink);
           transform: translate(-3px, -3px);
         }
-        .marquee-wrap { overflow: hidden; white-space: nowrap; }
-        .marquee-inner {
-          display: inline-block;
-          animation: marquee 22s linear infinite;
+        .gfl .t-card {
+          border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+          background-color: var(--raised);
+          padding: 28px 24px;
+          height: 100%;
         }
-        @keyframes marquee {
+        .gfl .t-mark {
+          font-family: 'Montserrat', sans-serif;
+          font-weight: 900; font-size: 44px; line-height: 0.6;
+          display: block; margin-bottom: 18px;
+          color: color-mix(in srgb, var(--ink) 30%, transparent);
+        }
+        .gfl .toggle-track {
+          width: 44px; height: 24px;
+          background: var(--ink); border-radius: 12px;
+          border: none;
+          position: relative; cursor: pointer;
+          flex-shrink: 0;
+          padding: 0;
+        }
+        .gfl .toggle-thumb {
+          position: absolute; top: 3px; left: 3px;
+          width: 18px; height: 18px;
+          background: var(--paper); border-radius: 50%;
+          transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .gfl .toggle-track[aria-checked="true"] .toggle-thumb { transform: translateX(20px); }
+        .gfl .marquee-wrap { overflow: hidden; white-space: nowrap; }
+        .gfl .marquee-inner {
+          display: inline-block;
+          animation: gfl-marquee 22s linear infinite;
+        }
+        @keyframes gfl-marquee {
           0% { transform: translateX(0); }
           100% { transform: translateX(-50%); }
         }
-        .step-num {
+        @keyframes gfl-fadeUp {
+          from { opacity: 0; transform: translateY(32px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .gfl .fade-up {
+          opacity: 0;
+          animation: gfl-fadeUp 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+        .gfl .step-num {
           font-family: 'Montserrat', sans-serif;
           font-weight: 900; font-size: 64px;
-          line-height: 1; color: rgba(17,24,39,0.07);
+          line-height: 1;
           position: absolute; top: -8px; right: 16px;
           pointer-events: none; user-select: none;
         }
+        .gfl .footer-link {
+          font-family: 'Montserrat', sans-serif;
+          font-size: 11px; font-weight: 500; letter-spacing: 0.06em;
+          text-transform: uppercase;
+          color: color-mix(in srgb, var(--ink) 65%, transparent);
+          text-decoration: none;
+          padding: 8px 0;
+          transition: color 0.2s;
+        }
+        .gfl .footer-link:hover { color: var(--ink); }
+        @media (prefers-reduced-motion: reduce) {
+          .gfl .marquee-inner { animation: none; }
+          .gfl .fade-up { animation: none; opacity: 1; }
+          .gfl .ink-btn, .gfl .ghost-btn, .gfl .feature-card, .gfl .pricing-card, .gfl .toggle-thumb {
+            transition: none;
+          }
+          .gfl .feature-card:hover, .gfl .pricing-card.active { transform: none; }
+        }
       `}</style>
 
-      <div className="paper-grain" />
+      <div className="paper-grain" aria-hidden="true" />
 
       {/* NAV */}
-      <nav
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 50,
-          backgroundColor: activeNav ? "rgba(250,250,248,0.95)" : "transparent",
-          borderBottom: activeNav ? "1px solid rgba(17,24,39,0.1)" : "1px solid transparent",
-          backdropFilter: activeNav ? "blur(8px)" : "none",
-          transition: "all 0.3s ease",
-          padding: "0 5vw",
-        }}
-      >
-        <div
-          style={{
-            maxWidth: 1200,
-            margin: "0 auto",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            height: 64,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span
-              style={{
-                fontFamily: "'Montserrat', sans-serif",
-                fontWeight: 900,
-                fontSize: 18,
-                letterSpacing: "-0.02em",
-              }}
-            >
-              Go
-            </span>
-            <span className="stamp" style={{ fontSize: 9, padding: "1px 6px" }}>
-              Form
-            </span>
-          </div>
-          <div style={{ display: "flex", gap: 32, alignItems: "center" }}>
+      <nav className={`nav-bar${activeNav ? " scrolled" : ""}${menuOpen ? " open" : ""}`}>
+        <div className="nav-inner">
+          <Link href="/" className="nav-logo">
+            <Logo size={18} />
+          </Link>
+          <div className="nav-links">
             {NAV_LINKS.map((l) => (
-              <Link
-                key={l.label}
-                href={l.href}
-                style={{
-                  fontFamily: "'Montserrat', sans-serif",
-                  fontSize: 12,
-                  fontWeight: 500,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  color: "#111827",
-                  textDecoration: "none",
-                  opacity: 0.65,
-                  transition: "opacity 0.2s",
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.65")}
-              >
+              <Link key={l.label} href={l.href} className="nav-link">
                 {l.label}
               </Link>
             ))}
             <ThemeToggle />
-            <Link href="/sign-up" className="ink-btn" style={{ padding: "9px 20px", fontSize: 11 }}>
+            <Link href="/sign-up" className="ink-btn" style={{ padding: "10px 20px", fontSize: 11 }}>
               Get started
             </Link>
+            <button
+              type="button"
+              className="menu-btn"
+              aria-expanded={menuOpen}
+              aria-controls="gfl-mobile-menu"
+              aria-label={menuOpen ? "Close menu" : "Open menu"}
+              onClick={() => setMenuOpen((o) => !o)}
+            >
+              <span />
+              <span />
+            </button>
           </div>
+        </div>
+        <div id="gfl-mobile-menu" className={`mobile-panel${menuOpen ? " open" : ""}`}>
+          {NAV_LINKS.map((l) => (
+            <Link key={l.label} href={l.href} className="nav-link" onClick={() => setMenuOpen(false)}>
+              {l.label}
+            </Link>
+          ))}
+          <Link href="/sign-up" className="ink-btn" onClick={() => setMenuOpen(false)}>
+            Get started
+          </Link>
         </div>
       </nav>
 
@@ -374,7 +541,7 @@ export default function App() {
       <section
         className="ruled-bg"
         style={{
-          paddingTop: 160,
+          paddingTop: "clamp(120px, 18vw, 160px)",
           paddingBottom: 120,
           paddingLeft: "5vw",
           paddingRight: "5vw",
@@ -383,64 +550,61 @@ export default function App() {
         }}
       >
         <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-          <div style={{ opacity: 0, animation: "fadeUp 0.8s ease 0.1s forwards" }}>
-            <style>{`@keyframes fadeUp { to { opacity:1; transform:translateY(0); } from { opacity:0; transform:translateY(32px); } }`}</style>
+          <div className="fade-up" style={{ animationDelay: "0.1s" }}>
             <span className="stamp">Beta — Now open</span>
           </div>
           <div style={{ marginTop: 32, maxWidth: 840 }}>
             <h1
-              className="large-display"
-              style={{
-                fontSize: "clamp(52px, 9vw, 108px)",
-                opacity: 0,
-                animation: "fadeUp 0.9s ease 0.2s forwards",
-              }}
+              className="large-display fade-up"
+              style={{ fontSize: "clamp(48px, 9vw, 96px)", animationDelay: "0.2s" }}
             >
               Forms,
               <br />
-              <span style={{ color: "transparent", WebkitTextStroke: "2px #111827" }}>
+              <span style={{ color: "transparent", WebkitTextStroke: "2px var(--ink)" }}>
                 set in
               </span>{" "}
               type.
             </h1>
           </div>
           <p
+            className="body-muted fade-up"
             style={{
               maxWidth: 480,
               fontSize: 18,
               lineHeight: 1.7,
-              color: "rgba(17,24,39,0.6)",
               marginTop: 32,
               fontWeight: 300,
-              opacity: 0,
-              animation: "fadeUp 0.9s ease 0.35s forwards",
+              animationDelay: "0.35s",
             }}
           >
             A form builder for people who care about craft. Minimal interface, maximum control.
             Inspired by the discipline of the printed page.
           </p>
           <div
+            className="fade-up"
             style={{
               display: "flex",
               gap: 16,
               marginTop: 48,
               flexWrap: "wrap",
-              opacity: 0,
-              animation: "fadeUp 0.9s ease 0.45s forwards",
+              animationDelay: "0.45s",
             }}
           >
             <Link href="/sign-up" className="ink-btn">
               Start building free
             </Link>
-            <button className="ghost-btn">See it in action</button>
+            <a href="#how-it-works" className="ghost-btn">
+              See it in action
+            </a>
           </div>
           <div
+            className="fade-up"
             style={{
               marginTop: 80,
               display: "flex",
-              gap: 40,
-              opacity: 0,
-              animation: "fadeUp 0.9s ease 0.55s forwards",
+              gap: "28px 48px",
+              flexWrap: "wrap",
+              animationDelay: "0.55s",
             }}
           >
             {[
@@ -459,16 +623,7 @@ export default function App() {
                 >
                   {val}
                 </div>
-                <div
-                  style={{
-                    fontFamily: "'PT Mono', monospace",
-                    fontSize: 11,
-                    letterSpacing: "0.08em",
-                    color: "rgba(17,24,39,0.45)",
-                    marginTop: 4,
-                    textTransform: "uppercase",
-                  }}
-                >
+                <div className="mono-label label-muted" style={{ marginTop: 4 }}>
                   {label}
                 </div>
               </div>
@@ -476,39 +631,18 @@ export default function App() {
           </div>
         </div>
 
-        {/* decorative element */}
-        <div
-          style={{
-            position: "absolute",
-            right: "5vw",
-            top: "50%",
-            transform: "translateY(-50%)",
-            width: 320,
-            height: 400,
-            border: "1px solid rgba(17,24,39,0.12)",
-            backgroundColor: "#FFFFFF",
-            padding: 24,
-            boxShadow: "8px 8px 0 rgba(17,24,39,0.08)",
-            opacity: 0,
-            animation: "fadeUp 1s ease 0.5s forwards",
-          }}
-          className="hidden lg:block"
-        >
+        {/* decorative form preview */}
+        <div className="hero-card fade-up" style={{ animationDelay: "0.5s" }} aria-hidden="true">
           <div
-            style={{
-              fontFamily: "'PT Mono', monospace",
-              fontSize: 10,
-              color: "rgba(17,24,39,0.35)",
-              marginBottom: 20,
-              letterSpacing: "0.1em",
-            }}
+            className="mono-label label-muted"
+            style={{ fontSize: 10, marginBottom: 20, letterSpacing: "0.1em" }}
           >
-            FORM PREVIEW — DRAFT
+            Form preview — Draft
           </div>
           {[
-            { label: "Full name", type: "text", value: "Rohan Sharma" },
-            { label: "Email", type: "email", value: "rohan@example.com" },
-            { label: "Company size", type: "select", value: "11–50 people" },
+            { label: "Full name", value: "Rohan Sharma" },
+            { label: "Email", value: "rohan@example.com" },
+            { label: "Company size", value: "11–50 people" },
           ].map((f) => (
             <div key={f.label} style={{ marginBottom: 20 }}>
               <div
@@ -519,18 +653,16 @@ export default function App() {
                   letterSpacing: "0.06em",
                   textTransform: "uppercase",
                   marginBottom: 6,
-                  color: "#111827",
                 }}
               >
                 {f.label}
               </div>
               <div
+                className="body-muted"
                 style={{
-                  borderBottom: "1px solid #111827",
+                  borderBottom: "1px solid var(--ink)",
                   paddingBottom: 8,
-                  fontFamily: "'Roboto', sans-serif",
                   fontSize: 14,
-                  color: "rgba(17,24,39,0.7)",
                 }}
               >
                 {f.value}
@@ -538,31 +670,18 @@ export default function App() {
             </div>
           ))}
           <div style={{ marginTop: 32 }}>
-            <div
-              style={{
-                background: "#111827",
-                color: "#FAFAF8",
-                padding: "10px 20px",
-                display: "inline-block",
-                fontFamily: "'Montserrat', sans-serif",
-                fontSize: 11,
-                fontWeight: 500,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-              }}
-            >
+            <span className="ink-btn" style={{ fontSize: 11, padding: "10px 20px" }}>
               Submit →
-            </div>
+            </span>
           </div>
           <div
+            className="mono-label"
             style={{
               position: "absolute",
               bottom: 16,
               right: 16,
-              fontFamily: "'PT Mono', monospace",
               fontSize: 9,
-              color: "rgba(17,24,39,0.25)",
-              letterSpacing: "0.08em",
+              color: "color-mix(in srgb, var(--ink) 40%, transparent)",
             }}
           >
             GO FORM v2
@@ -571,10 +690,7 @@ export default function App() {
       </section>
 
       {/* MARQUEE */}
-      <div
-        className="rule-top rule-bottom"
-        style={{ padding: "14px 0", backgroundColor: "#111827" }}
-      >
+      <div style={{ padding: "14px 0", backgroundColor: "var(--ink)" }} aria-hidden="true">
         <div className="marquee-wrap">
           <div className="marquee-inner">
             {Array(2)
@@ -598,7 +714,7 @@ export default function App() {
                     fontWeight: 500,
                     letterSpacing: "0.12em",
                     textTransform: "uppercase",
-                    color: "#FAFAF8",
+                    color: "var(--paper)",
                     marginRight: 48,
                   }}
                 >
@@ -618,7 +734,7 @@ export default function App() {
               className="large-display"
               style={{ fontSize: "clamp(32px, 5vw, 56px)", marginTop: 12, maxWidth: 480 }}
             >
-              Every tool you need, nothing you don't.
+              Every tool you need, nothing you don&apos;t.
             </h2>
           </FadeIn>
           <div
@@ -627,13 +743,15 @@ export default function App() {
               gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
               gap: 1,
               marginTop: 56,
-              backgroundColor: "rgba(17,24,39,0.1)",
+              backgroundColor: "color-mix(in srgb, var(--ink) 10%, transparent)",
             }}
           >
             {FEATURES.map((f, i) => (
               <FadeIn key={f.title} delay={i * 80}>
-                <div className="feature-card" style={{ height: "100%" }}>
-                  <div style={{ fontSize: 22, marginBottom: 16, color: "#111827" }}>{f.icon}</div>
+                <div className="feature-card">
+                  <div style={{ fontSize: 22, marginBottom: 16 }} aria-hidden="true">
+                    {f.icon}
+                  </div>
                   <h3
                     style={{
                       fontFamily: "'Montserrat', sans-serif",
@@ -645,14 +763,7 @@ export default function App() {
                   >
                     {f.title}
                   </h3>
-                  <p
-                    style={{
-                      fontSize: 14,
-                      lineHeight: 1.7,
-                      color: "rgba(17,24,39,0.6)",
-                      fontWeight: 300,
-                    }}
-                  >
+                  <p className="body-muted" style={{ fontSize: 14, lineHeight: 1.7 }}>
                     {f.desc}
                   </p>
                 </div>
@@ -663,17 +774,12 @@ export default function App() {
       </section>
 
       {/* HOW IT WORKS */}
-      <section id="how-it-works" style={{ padding: "80px 5vw", backgroundColor: "#111827" }}>
+      <section id="how-it-works" style={{ padding: "80px 5vw", backgroundColor: "var(--deep-bg)" }}>
         <div style={{ maxWidth: 1200, margin: "0 auto" }}>
           <FadeIn>
             <span
-              style={{
-                fontFamily: "'PT Mono', monospace",
-                fontSize: 11,
-                color: "rgba(250,250,248,0.4)",
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-              }}
+              className="mono-label"
+              style={{ color: "color-mix(in srgb, var(--deep-ink) 65%, transparent)" }}
             >
               § 02 — How it works
             </span>
@@ -682,7 +788,7 @@ export default function App() {
               style={{
                 fontSize: "clamp(32px, 5vw, 56px)",
                 marginTop: 12,
-                color: "#FAFAF8",
+                color: "var(--deep-ink)",
                 maxWidth: 480,
               }}
             >
@@ -702,20 +808,23 @@ export default function App() {
                 <div
                   style={{
                     padding: "32px 28px",
-                    border: "1px solid rgba(250,250,248,0.1)",
+                    border: "1px solid color-mix(in srgb, var(--deep-ink) 12%, transparent)",
                     position: "relative",
                     overflow: "hidden",
+                    height: "100%",
                   }}
                 >
-                  <div className="step-num" style={{ color: "rgba(250,250,248,0.07)" }}>
+                  <div
+                    className="step-num"
+                    style={{ color: "color-mix(in srgb, var(--deep-ink) 9%, transparent)" }}
+                    aria-hidden="true"
+                  >
                     {s.step}
                   </div>
                   <div
+                    className="mono-label"
                     style={{
-                      fontFamily: "'PT Mono', monospace",
-                      fontSize: 11,
-                      color: "rgba(250,250,248,0.4)",
-                      letterSpacing: "0.1em",
+                      color: "color-mix(in srgb, var(--deep-ink) 65%, transparent)",
                       marginBottom: 16,
                     }}
                   >
@@ -726,7 +835,7 @@ export default function App() {
                       fontFamily: "'Montserrat', sans-serif",
                       fontWeight: 700,
                       fontSize: 20,
-                      color: "#FAFAF8",
+                      color: "var(--deep-ink)",
                       marginBottom: 12,
                     }}
                   >
@@ -736,8 +845,7 @@ export default function App() {
                     style={{
                       fontSize: 14,
                       lineHeight: 1.7,
-                      color: "rgba(250,250,248,0.55)",
-                      fontWeight: 300,
+                      color: "color-mix(in srgb, var(--deep-ink) 72%, transparent)",
                     }}
                   >
                     {s.desc}
@@ -772,25 +880,28 @@ export default function App() {
               </h2>
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
                 <span
+                  id="gfl-billing-monthly"
                   style={{
                     fontFamily: "'Montserrat', sans-serif",
                     fontSize: 12,
                     fontWeight: 500,
                     letterSpacing: "0.06em",
                     textTransform: "uppercase",
-                    opacity: billingAnnual ? 0.4 : 1,
+                    opacity: billingAnnual ? 0.55 : 1,
                   }}
                 >
                   Monthly
                 </span>
-                <div
+                <button
+                  type="button"
                   className="toggle-track"
                   onClick={() => setBillingAnnual((b) => !b)}
                   role="switch"
                   aria-checked={billingAnnual}
+                  aria-label="Bill annually (save 20%)"
                 >
-                  <div className="toggle-thumb" style={{ left: billingAnnual ? 23 : 3 }} />
-                </div>
+                  <span className="toggle-thumb" />
+                </button>
                 <span
                   style={{
                     fontFamily: "'Montserrat', sans-serif",
@@ -798,12 +909,12 @@ export default function App() {
                     fontWeight: 500,
                     letterSpacing: "0.06em",
                     textTransform: "uppercase",
-                    opacity: billingAnnual ? 1 : 0.4,
+                    opacity: billingAnnual ? 1 : 0.55,
                   }}
                 >
                   Annual{" "}
                   <span
-                    style={{ fontFamily: "'PT Mono', monospace", fontSize: 10, color: "#16A34A" }}
+                    style={{ fontFamily: "'PT Mono', monospace", fontSize: 10, color: "var(--green)" }}
                   >
                     −20%
                   </span>
@@ -833,8 +944,8 @@ export default function App() {
                         className="stamp"
                         style={{
                           fontSize: 9,
-                          background: "#111827",
-                          color: "#FAFAF8",
+                          background: "var(--ink)",
+                          color: "var(--paper)",
                           border: "none",
                           padding: "3px 10px",
                         }}
@@ -843,16 +954,7 @@ export default function App() {
                       </span>
                     </div>
                   )}
-                  <div
-                    style={{
-                      fontFamily: "'PT Mono', monospace",
-                      fontSize: 11,
-                      letterSpacing: "0.1em",
-                      color: "rgba(17,24,39,0.4)",
-                      textTransform: "uppercase",
-                      marginBottom: 12,
-                    }}
-                  >
+                  <div className="mono-label label-muted" style={{ marginBottom: 12 }}>
                     {plan.tier}
                   </div>
                   <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 4 }}>
@@ -867,32 +969,20 @@ export default function App() {
                       ${billingAnnual ? annualPrice(plan.price) : plan.price}
                     </span>
                     {plan.price !== "0" && (
-                      <span
-                        style={{
-                          fontFamily: "'PT Mono', monospace",
-                          fontSize: 11,
-                          color: "rgba(17,24,39,0.4)",
-                          textTransform: "uppercase",
-                        }}
-                      >
-                        /{plan.period}
+                      <span className="mono-label label-muted">
+                        /{billingAnnual ? "mo, billed yearly" : plan.period}
                       </span>
                     )}
                   </div>
                   <p
-                    style={{
-                      fontSize: 13,
-                      color: "rgba(17,24,39,0.55)",
-                      lineHeight: 1.6,
-                      marginBottom: 28,
-                      fontWeight: 300,
-                    }}
+                    className="body-muted"
+                    style={{ fontSize: 13, lineHeight: 1.6, marginBottom: 28 }}
                   >
                     {plan.tagline}
                   </p>
                   <div
                     style={{
-                      borderTop: "1px solid rgba(17,24,39,0.1)",
+                      borderTop: "1px solid color-mix(in srgb, var(--ink) 10%, transparent)",
                       paddingTop: 20,
                       marginBottom: 28,
                     }}
@@ -906,36 +996,31 @@ export default function App() {
                           style={{
                             fontFamily: "'PT Mono', monospace",
                             fontSize: 12,
-                            color: "#16A34A",
+                            color: "var(--green)",
                           }}
+                          aria-hidden="true"
                         >
                           ✓
                         </span>
-                        <span
-                          style={{ fontSize: 13, color: "rgba(17,24,39,0.75)", fontWeight: 300 }}
-                        >
+                        <span className="body-muted" style={{ fontSize: 13 }}>
                           {f}
                         </span>
                       </div>
                     ))}
                   </div>
                   {plan.cta === "Talk to us" ? (
-                    <button
+                    <a
+                      href="mailto:rohanm2248@gmail.com?subject=Go%20Form%20Edition%20plan"
                       className="ghost-btn"
-                      style={{ width: "100%", textAlign: "center", padding: "12px 0" }}
+                      style={{ width: "100%", padding: "12px 0", display: "block" }}
                     >
                       {plan.cta}
-                    </button>
+                    </a>
                   ) : (
                     <Link
                       href="/sign-up"
                       className={plan.highlight ? "ink-btn" : "ghost-btn"}
-                      style={{
-                        width: "100%",
-                        textAlign: "center",
-                        padding: "12px 0",
-                        display: "block",
-                      }}
+                      style={{ width: "100%", padding: "12px 0", display: "block" }}
                     >
                       {plan.cta}
                     </Link>
@@ -946,15 +1031,8 @@ export default function App() {
           </div>
           <FadeIn delay={300}>
             <p
-              style={{
-                textAlign: "center",
-                marginTop: 32,
-                fontFamily: "'PT Mono', monospace",
-                fontSize: 11,
-                letterSpacing: "0.08em",
-                color: "rgba(17,24,39,0.35)",
-                textTransform: "uppercase",
-              }}
+              className="mono-label label-muted"
+              style={{ textAlign: "center", marginTop: 32 }}
             >
               All plans include SSL, GDPR-ready exports, and 99.9% uptime.
             </p>
@@ -966,9 +1044,9 @@ export default function App() {
       <section
         style={{
           padding: "80px 5vw",
-          backgroundColor: "#F5F4F0",
-          borderTop: "1px solid rgba(17,24,39,0.08)",
-          borderBottom: "1px solid rgba(17,24,39,0.08)",
+          backgroundColor: "var(--alt)",
+          borderTop: "1px solid color-mix(in srgb, var(--ink) 8%, transparent)",
+          borderBottom: "1px solid color-mix(in srgb, var(--ink) 8%, transparent)",
         }}
       >
         <div style={{ maxWidth: 1200, margin: "0 auto" }}>
@@ -985,47 +1063,37 @@ export default function App() {
           >
             {TESTIMONIALS.map((t, i) => (
               <FadeIn key={t.name} delay={i * 100}>
-                <div
-                  style={{
-                    padding: "28px 24px",
-                    borderLeft: "3px solid #111827",
-                    backgroundColor: "#FFFFFF",
-                  }}
-                >
-                  <p
+                <figure className="t-card" style={{ margin: 0 }}>
+                  <span className="t-mark" aria-hidden="true">
+                    “
+                  </span>
+                  <blockquote
                     style={{
+                      margin: 0,
                       fontSize: 15,
                       lineHeight: 1.7,
-                      fontWeight: 300,
                       marginBottom: 20,
                       fontStyle: "italic",
                     }}
                   >
-                    "{t.quote}"
-                  </p>
-                  <div
-                    style={{
-                      fontFamily: "'Montserrat', sans-serif",
-                      fontSize: 12,
-                      fontWeight: 600,
-                      letterSpacing: "0.04em",
-                    }}
-                  >
-                    {t.name}
-                  </div>
-                  <div
-                    style={{
-                      fontFamily: "'PT Mono', monospace",
-                      fontSize: 10,
-                      color: "rgba(17,24,39,0.4)",
-                      marginTop: 4,
-                      letterSpacing: "0.08em",
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    {t.role}
-                  </div>
-                </div>
+                    {t.quote}
+                  </blockquote>
+                  <figcaption>
+                    <div
+                      style={{
+                        fontFamily: "'Montserrat', sans-serif",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        letterSpacing: "0.04em",
+                      }}
+                    >
+                      {t.name}
+                    </div>
+                    <div className="mono-label label-muted" style={{ fontSize: 10, marginTop: 4 }}>
+                      {t.role}
+                    </div>
+                  </figcaption>
+                </figure>
               </FadeIn>
             ))}
           </div>
@@ -1046,7 +1114,7 @@ export default function App() {
             <br />
             in under a minute.
           </h2>
-          <p style={{ fontSize: 16, color: "rgba(17,24,39,0.5)", marginTop: 24, fontWeight: 300 }}>
+          <p className="body-muted" style={{ fontSize: 16, marginTop: 24 }}>
             No credit card. No setup. Just type.
           </p>
           <div
@@ -1065,15 +1133,20 @@ export default function App() {
             >
               Create your free account
             </Link>
-            <button className="ghost-btn" style={{ fontSize: 14, padding: "13px 36px" }}>
-              Read the docs
-            </button>
+            <Link href="/explore" className="ghost-btn" style={{ fontSize: 14, padding: "13px 36px" }}>
+              Explore public forms
+            </Link>
           </div>
         </FadeIn>
       </section>
 
       {/* FOOTER */}
-      <footer style={{ borderTop: "1px solid rgba(17,24,39,0.12)", padding: "48px 5vw" }}>
+      <footer
+        style={{
+          borderTop: "1px solid color-mix(in srgb, var(--ink) 12%, transparent)",
+          padding: "48px 5vw",
+        }}
+      >
         <div
           style={{
             maxWidth: 1200,
@@ -1086,52 +1159,16 @@ export default function App() {
           }}
         >
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-              <span
-                style={{
-                  fontFamily: "'Montserrat', sans-serif",
-                  fontWeight: 900,
-                  fontSize: 16,
-                  letterSpacing: "-0.02em",
-                }}
-              >
-                Go
-              </span>
-              <span className="stamp" style={{ fontSize: 9, padding: "1px 6px" }}>
-                Form
-              </span>
+            <div style={{ marginBottom: 8 }}>
+              <Logo size={16} />
             </div>
-            <p
-              style={{
-                fontFamily: "'PT Mono', monospace",
-                fontSize: 10,
-                color: "rgba(17,24,39,0.35)",
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-              }}
-            >
-              © 2025 Go Form. All rights reserved.
+            <p className="mono-label label-muted" style={{ fontSize: 10 }}>
+              © 2026 Use Form. All rights reserved.
             </p>
           </div>
           <div style={{ display: "flex", gap: 32, flexWrap: "wrap" }}>
             {["Privacy", "Terms", "Status", "GitHub"].map((l) => (
-              <a
-                key={l}
-                href="#"
-                style={{
-                  fontFamily: "'Montserrat', sans-serif",
-                  fontSize: 11,
-                  fontWeight: 500,
-                  letterSpacing: "0.06em",
-                  textTransform: "uppercase",
-                  color: "#111827",
-                  textDecoration: "none",
-                  opacity: 0.45,
-                  transition: "opacity 0.2s",
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.45")}
-              >
+              <a key={l} href="#" className="footer-link">
                 {l}
               </a>
             ))}
