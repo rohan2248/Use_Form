@@ -5,6 +5,7 @@
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "env": ["DATABASE_URL", "JWT_SECRET", "NEXT_PUBLIC_API_URL"],
       "outputs": [".next/**", "!.next/cache/**"]
     },
     "lint": {
@@ -15,9 +16,14 @@
     },
     "dev": {
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "env": ["DATABASE_URL", "JWT_SECRET", "NEXT_PUBLIC_API_URL", "PORT", "BASE_URL", "LOGGER_LEVEL"]
     },
-    "db:generate": {},
-    "db:migrate": {}
+    "db:generate": {
+      "env": ["DATABASE_URL"]
+    },
+    "db:migrate": {
+      "env": ["DATABASE_URL"]
+    }
   }
 }
