@@ -5,7 +5,7 @@ import {
   createUserWithEmailAndPasswordOutputModel,
 } from "./model";
 import { userService } from "../../services";
-import { setAuthenticationCookie } from "../../utils/cookie";
+import { setAuthenticationCookie, clearAuthenticationCookie } from "../../utils/cookie";
 import { TRPCContext } from "../../context";
 import {
   signInUserWithEmailAndPasswordInputModel,
@@ -13,6 +13,7 @@ import {
 } from "./model";
 import { getAuthenticationCookie } from "../../utils/cookie";
 import { getLoggedInUserInfoInputModel, getLoggedInUserInfoOutputModel } from "./model";
+import { logoutUserInputModel, logoutUserOutputModel } from "./model";
 
 const TAGS = ["Authentication"];
 const getPath = generatePath("/authentication");
@@ -66,6 +67,23 @@ export const authRouter = router({
       return {
         id,
       };
+    }),
+
+  logoutUser: publicProcedure
+    .meta({
+      openapi: {
+        method: "POST",
+        path: getPath("/logoutUser"),
+        tags: TAGS,
+      },
+    })
+    .input(logoutUserInputModel)
+    .output(logoutUserOutputModel)
+    .mutation(async ({ ctx }) => {
+      // public so a user with an expired/invalid token can still clear their cookie
+      clearAuthenticationCookie(ctx);
+
+      return { success: true };
     }),
 
   getLoggedInUserInfo: authenticatedProcedure

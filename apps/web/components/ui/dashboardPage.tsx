@@ -4,7 +4,8 @@ import Link from "next/link";
 import { ThemeToggle } from "~/components/ui/theme-toggle";
 import { Logo, LogoMark } from "~/components/ui/logo";
 import { useCreateForm, useDeleteForm, useListForms, useGetFields, useCreateField, useDeleteField, useUpdateField, useReorderField, useUpdateFormStatus, useUpdateFormVisibility, useUpdateFormSettings, useGetFormSubmissions, useGetAnalyticsSummary, useGetAllSubmissions } from "~/hooks/api/form";
-import { useUser } from "~/hooks/api/auth";
+import { useUser, useLogout } from "~/hooks/api/auth";
+import { useRouter } from "next/navigation";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1628,11 +1629,15 @@ function Sidebar({
   onChange,
   formsCount,
   user,
+  onLogout,
+  loggingOut,
 }: {
   active: ViewKey;
   onChange: (v: ViewKey) => void;
   formsCount: number;
   user: { id: string; email: string; fullName: string } | null | undefined;
+  onLogout: () => void;
+  loggingOut: boolean;
 }) {
   const initials = user?.fullName
     ?.split(" ")
@@ -1696,12 +1701,34 @@ function Sidebar({
             </div>
           </div>
         </div>
+        <button
+          onClick={onLogout}
+          disabled={loggingOut}
+          className="w-full mt-1.5 flex items-center justify-center gap-2 border border-shell-fg/20 px-3 py-2 font-display font-semibold text-[10px] tracking-widest uppercase text-shell-fg/70 hover:bg-shell-fg/10 hover:border-shell-fg/40 hover:text-shell-fg transition-all rounded-[4px] disabled:opacity-50"
+        >
+          <i
+            className={`ti ${loggingOut ? "ti-loader-2 animate-spin" : "ti-logout"}`}
+            style={{ fontSize: 13 }}
+            aria-hidden="true"
+          />
+          {loggingOut ? "Signing out…" : "Sign out"}
+        </button>
       </div>
     </aside>
   );
 }
 
-function MobileNav({ active, onChange }: { active: ViewKey; onChange: (v: ViewKey) => void }) {
+function MobileNav({
+  active,
+  onChange,
+  onLogout,
+  loggingOut,
+}: {
+  active: ViewKey;
+  onChange: (v: ViewKey) => void;
+  onLogout: () => void;
+  loggingOut: boolean;
+}) {
   return (
     <nav
       className="md:hidden bg-shell text-shell-fg flex items-center gap-1 px-3 py-2 overflow-x-auto shrink-0"
@@ -1730,6 +1757,18 @@ function MobileNav({ active, onChange }: { active: ViewKey; onChange: (v: ViewKe
         <i className="ti ti-world" style={{ fontSize: 14 }} aria-hidden="true" />
         Explore
       </Link>
+      <button
+        onClick={onLogout}
+        disabled={loggingOut}
+        className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] text-shell-fg/60 hover:text-shell-fg whitespace-nowrap transition-all ml-auto disabled:opacity-50"
+      >
+        <i
+          className={`ti ${loggingOut ? "ti-loader-2 animate-spin" : "ti-logout"}`}
+          style={{ fontSize: 14 }}
+          aria-hidden="true"
+        />
+        Sign out
+      </button>
     </nav>
   );
 }
@@ -1948,9 +1987,20 @@ export default function Dashboard() {
   const { msg, visible, toast } = useToast();
   const { forms = [] } = useListForms();
   const { user } = useUser();
+  const { logoutUserAsync, isPending: loggingOut } = useLogout();
+  const router = useRouter();
   const { deleteFormAsync } = useDeleteForm();
   const { updateFormStatusAsync } = useUpdateFormStatus();
   const { updateFormVisibilityAsync } = useUpdateFormVisibility();
+
+  const handleLogout = async () => {
+    try {
+      await logoutUserAsync({});
+      router.replace("/login");
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Failed to sign out");
+    }
+  };
 
   const handlePublishToggle = async (id: string, newStatus: "published" | "unpublished") => {
     try {
@@ -2038,10 +2088,22 @@ export default function Dashboard() {
         }
       `}</style>
 
-      <Sidebar active={activeNav} onChange={setView} formsCount={forms.length} user={user} />
+      <Sidebar
+        active={activeNav}
+        onChange={setView}
+        formsCount={forms.length}
+        user={user}
+        onLogout={() => void handleLogout()}
+        loggingOut={loggingOut}
+      />
 
       <div className="flex-1 flex flex-col min-w-0">
-        <MobileNav active={activeNav} onChange={setView} />
+        <MobileNav
+          active={activeNav}
+          onChange={setView}
+          onLogout={() => void handleLogout()}
+          loggingOut={loggingOut}
+        />
         <div className="bg-paper border-b border-ink/10 px-4 md:px-7 h-13 flex items-center justify-between gap-3 shrink-0">
           <span className="font-display font-bold text-base tracking-tight truncate">
             {VIEW_TITLES[view]}

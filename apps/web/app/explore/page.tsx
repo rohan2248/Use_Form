@@ -16,7 +16,7 @@ function ExploreCard({
   title: string;
   description: string | null;
   responseCount: number;
-  createdAt: Date | null;
+  createdAt: Date | string | null;
 }) {
   const date = createdAt
     ? new Date(createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
