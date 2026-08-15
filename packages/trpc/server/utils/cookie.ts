@@ -7,13 +7,15 @@ const ONE_DAY = 24 * ONE_HOUR;
 const ONE_MONTH = 30 * ONE_DAY;
 const ONE_YEAR = 12 * ONE_MONTH;
 
-const defaultCookieOptions: CookieOptions = {
+export const defaultCookieOptions: CookieOptions = {
   path: "/",
   httpOnly: true,
-  secure: false,
+  secure: process.env.NODE_ENV === "production",
   sameSite: "strict",
   maxAge: ONE_YEAR,
 };
+
+export const AUTHENTICATION_COOKIE_NAME = "authentication-token";
 
 export function createCookieFactory(res: Response) {
   return function createCookie(
@@ -38,8 +40,6 @@ export function clearCookieFactory(res: Response) {
 }
 
 //Auth cookie
-const AUTHENTICATION_COOKIE_NAME = "authentication-token";
-
 export function setAuthenticationCookie(ctx: TRPCContext, accessToken: string) {
   ctx.createCookie(AUTHENTICATION_COOKIE_NAME, accessToken);
 }
