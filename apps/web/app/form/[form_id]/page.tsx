@@ -1,6 +1,7 @@
 "use client";
 import { useRef, useState, useEffect } from "react";
 import { useParams } from "next/navigation";
+import { useTheme } from "next-themes";
 import Link from "next/link";
 import { useGetForm, useSubmitForm } from "~/hooks/api/form";
 import { ThemeToggle } from "~/components/ui/theme-toggle";
@@ -122,7 +123,7 @@ function FieldInput({
             value={value as string}
             onChange={(e) => onChange(e.target.value)}
             className={inputBase}
-            style={{ colorScheme: "light" }}
+            style={{ colorScheme: "var(--ff-scheme)" }}
           />
         );
 
@@ -150,8 +151,8 @@ function FieldInput({
               style={{
                 width: 20,
                 height: 20,
-                border: `1.5px solid ${value ? "#111827" : "rgba(17,24,39,0.25)"}`,
-                background: value ? "#111827" : "#fff",
+                border: `1.5px solid ${value ? "var(--ff-ink)" : "rgb(var(--ff-ink-rgb) / 0.25)"}`,
+                background: value ? "var(--ff-ink)" : "var(--ff-surface)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -163,7 +164,7 @@ function FieldInput({
                 <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
                   <path
                     d="M1 4l3 3 5-6"
-                    stroke="#FAFAF8"
+                    stroke="var(--ff-paper)"
                     strokeWidth="1.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -175,7 +176,7 @@ function FieldInput({
               style={{
                 fontFamily: "'Roboto', sans-serif",
                 fontSize: 14,
-                color: "rgba(17,24,39,0.65)",
+                color: "rgb(var(--ff-ink-rgb) / 0.65)",
               }}
             >
               Yes, I agree
@@ -193,9 +194,9 @@ function FieldInput({
                 onClick={() => onChange(opt)}
                 style={{
                   padding: "10px 32px",
-                  border: `1px solid ${value === opt ? "#111827" : "rgba(17,24,39,0.18)"}`,
-                  background: value === opt ? "#111827" : "#fff",
-                  color: value === opt ? "#FAFAF8" : "rgba(17,24,39,0.6)",
+                  border: `1px solid ${value === opt ? "var(--ff-ink)" : "rgb(var(--ff-ink-rgb) / 0.18)"}`,
+                  background: value === opt ? "var(--ff-ink)" : "var(--ff-surface)",
+                  color: value === opt ? "var(--ff-paper)" : "rgb(var(--ff-ink-rgb) / 0.6)",
                   fontFamily: "'Montserrat', sans-serif",
                   fontWeight: 500,
                   fontSize: 12,
@@ -246,7 +247,7 @@ function FieldInput({
             marginTop: 6,
             fontFamily: "'Roboto', sans-serif",
             fontSize: 12,
-            color: "rgba(17,24,39,0.4)",
+            color: "rgb(var(--ff-ink-rgb) / 0.4)",
             fontWeight: 300,
           }}
         >
@@ -260,7 +261,7 @@ function FieldInput({
             fontFamily: "'PT Mono', monospace",
             fontSize: 10,
             letterSpacing: "0.06em",
-            color: "#DC2626",
+            color: "var(--ff-error)",
           }}
         >
           {error}
@@ -299,7 +300,7 @@ function SuccessScreen({ formTitle }: { formTitle: string }) {
           style={{
             width: 52,
             height: 52,
-            background: "#111827",
+            background: "var(--ff-ink)",
             margin: "0 auto 28px",
             display: "flex",
             alignItems: "center",
@@ -309,7 +310,7 @@ function SuccessScreen({ formTitle }: { formTitle: string }) {
           <svg width="22" height="17" viewBox="0 0 22 17" fill="none">
             <path
               d="M1.5 8.5l7 7L20.5 1"
-              stroke="#FAFAF8"
+              stroke="var(--ff-paper)"
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -322,7 +323,7 @@ function SuccessScreen({ formTitle }: { formTitle: string }) {
             fontSize: 10,
             letterSpacing: "0.12em",
             textTransform: "uppercase",
-            color: "rgba(17,24,39,0.35)",
+            color: "rgb(var(--ff-ink-rgb) / 0.35)",
             marginBottom: 14,
           }}
         >
@@ -345,7 +346,7 @@ function SuccessScreen({ formTitle }: { formTitle: string }) {
             fontFamily: "'Roboto', sans-serif",
             fontSize: 15,
             lineHeight: 1.7,
-            color: "rgba(17,24,39,0.55)",
+            color: "rgb(var(--ff-ink-rgb) / 0.55)",
             fontWeight: 300,
             maxWidth: 360,
             margin: "0 auto",
@@ -392,7 +393,7 @@ function UnavailableScreen({ status }: { status: "draft" | "unpublished" | "not_
         <div
           style={{
             display: "inline-block",
-            border: "2px solid #111827",
+            border: "2px solid var(--ff-ink)",
             padding: "2px 10px",
             fontFamily: "'PT Mono', monospace",
             fontSize: 10,
@@ -419,7 +420,7 @@ function UnavailableScreen({ status }: { status: "draft" | "unpublished" | "not_
           style={{
             fontFamily: "'Roboto', sans-serif",
             fontSize: 15,
-            color: "rgba(17,24,39,0.5)",
+            color: "rgb(var(--ff-ink-rgb) / 0.5)",
             fontWeight: 300,
             lineHeight: 1.7,
           }}
@@ -430,9 +431,9 @@ function UnavailableScreen({ status }: { status: "draft" | "unpublished" | "not_
           <Link
             href="/"
             style={{
-              background: "#111827",
-              color: "#FAFAF8",
-              border: "1px solid #111827",
+              background: "var(--ff-ink)",
+              color: "var(--ff-paper)",
+              border: "1px solid var(--ff-ink)",
               padding: "12px 28px",
               fontFamily: "'Montserrat', sans-serif",
               fontWeight: 500,
@@ -454,9 +455,43 @@ function UnavailableScreen({ status }: { status: "draft" | "unpublished" | "not_
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+/**
+ * Palette for the public fill page. Every colour on this page is an inline
+ * style, which no stylesheet can override, so the two base tones (ink + paper)
+ * and their alpha variants are exposed as CSS variables on the page root and
+ * swapped wholesale when the visitor picks dark mode.
+ */
+const FILL_PALETTE = {
+  light: {
+    "--ff-ink": "#111827",
+    "--ff-ink-rgb": "17 24 39",
+    "--ff-paper": "#FAFAF8",
+    "--ff-paper-rgb": "250 250 248",
+    "--ff-surface": "#ffffff",
+    "--ff-error": "#DC2626",
+    "--ff-scheme": "light",
+  },
+  dark: {
+    "--ff-ink": "#E8EAED",
+    "--ff-ink-rgb": "232 234 237",
+    "--ff-paper": "#11151C",
+    "--ff-paper-rgb": "17 21 28",
+    "--ff-surface": "#1A1F29",
+    "--ff-error": "#F87171",
+    "--ff-scheme": "dark",
+  },
+} as const;
+
 export default function PublicFormPage() {
   const params = useParams();
   const formId = params?.form_id as string;
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  // render light on first paint, then adopt the real theme, to avoid a
+  // hydration mismatch (same approach as ThemeToggle)
+  useEffect(() => setMounted(true), []);
+  const palette = mounted && resolvedTheme === "dark" ? FILL_PALETTE.dark : FILL_PALETTE.light;
   const { form, isLoading, error } = useGetForm(formId);
   const { submitFormAsync } = useSubmitForm();
 
@@ -524,18 +559,21 @@ export default function PublicFormPage() {
   return (
     <div
       style={{
+        ...palette,
         fontFamily: "'Roboto', sans-serif",
-        backgroundColor: "#FAFAF8",
-        color: "#111827",
+        backgroundColor: "var(--ff-paper)",
+        color: "var(--ff-ink)",
+        colorScheme: "var(--ff-scheme)",
         minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
+        transition: "background-color 200ms ease, color 200ms ease",
       }}
     >
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;700;900&family=Roboto:wght@300;400;500&family=PT+Mono&display=swap');
         * { box-sizing: border-box; }
-        ::selection { background: #111827; color: #FAFAF8; }
+        ::selection { background: var(--ff-ink); color: var(--ff-paper); }
         .font-display { font-family: 'Montserrat', sans-serif; }
         .font-mono    { font-family: 'PT Mono', monospace; }
         .paper-grain {
@@ -551,8 +589,8 @@ export default function PublicFormPage() {
       {/* Header */}
       <header
         style={{
-          borderBottom: "1px solid rgba(17,24,39,0.1)",
-          backgroundColor: "rgba(250,250,248,0.94)",
+          borderBottom: "1px solid rgb(var(--ff-ink-rgb) / 0.1)",
+          backgroundColor: "rgb(var(--ff-paper-rgb) / 0.94)",
           backdropFilter: "blur(8px)",
           position: "sticky",
           top: 0,
@@ -580,20 +618,20 @@ export default function PublicFormPage() {
                 fontWeight: 900,
                 fontSize: 15,
                 letterSpacing: "-0.02em",
-                color: "#111827",
+                color: "var(--ff-ink)",
               }}
             >
               Go
             </span>
             <span
               style={{
-                border: "1.5px solid #111827",
+                border: "1.5px solid var(--ff-ink)",
                 padding: "1px 6px",
                 fontFamily: "'PT Mono', monospace",
                 fontSize: 8,
                 letterSpacing: "0.12em",
                 textTransform: "uppercase",
-                color: "#111827",
+                color: "var(--ff-ink)",
               }}
             >
               Form
@@ -609,12 +647,12 @@ export default function PublicFormPage() {
                 fontWeight: 500,
                 letterSpacing: "0.07em",
                 textTransform: "uppercase",
-                color: "rgba(17,24,39,0.45)",
+                color: "rgb(var(--ff-ink-rgb) / 0.45)",
                 textDecoration: "none",
                 transition: "color 0.2s",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "#111827")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(17,24,39,0.45)")}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "var(--ff-ink)")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "rgb(var(--ff-ink-rgb) / 0.45)")}
             >
               Create your own →
             </Link>
@@ -654,7 +692,7 @@ export default function PublicFormPage() {
                     fontSize: 10,
                     letterSpacing: "0.12em",
                     textTransform: "uppercase",
-                    color: "rgba(17,24,39,0.32)",
+                    color: "rgb(var(--ff-ink-rgb) / 0.32)",
                     marginBottom: 20,
                   }}
                 >
@@ -677,7 +715,7 @@ export default function PublicFormPage() {
                     style={{
                       fontSize: 15,
                       lineHeight: 1.75,
-                      color: "rgba(17,24,39,0.58)",
+                      color: "rgb(var(--ff-ink-rgb) / 0.58)",
                       fontWeight: 300,
                       marginBottom: 52,
                       maxWidth: 520,
@@ -695,7 +733,7 @@ export default function PublicFormPage() {
                     <FadeIn key={field.id} delay={i * 55}>
                       <div
                         style={{
-                          borderBottom: "1px solid rgba(17,24,39,0.07)",
+                          borderBottom: "1px solid rgb(var(--ff-ink-rgb) / 0.07)",
                           paddingBottom: 32,
                           marginBottom: 32,
                         }}
@@ -709,14 +747,14 @@ export default function PublicFormPage() {
                             letterSpacing: "0.07em",
                             textTransform: "uppercase",
                             marginBottom: 10,
-                            color: "#111827",
+                            color: "var(--ff-ink)",
                           }}
                         >
                           {field.label}
                           {field.isRequired && (
                             <span
                               style={{
-                                color: "#DC2626",
+                                color: "var(--ff-error)",
                                 marginLeft: 4,
                                 fontFamily: "'PT Mono', monospace",
                               }}
@@ -744,7 +782,7 @@ export default function PublicFormPage() {
                         fontSize: 11,
                         letterSpacing: "0.1em",
                         textTransform: "uppercase",
-                        color: "rgba(17,24,39,0.3)",
+                        color: "rgb(var(--ff-ink-rgb) / 0.3)",
                       }}
                     >
                       No fields have been added to this form yet
@@ -758,9 +796,9 @@ export default function PublicFormPage() {
                       type="submit"
                       disabled={submitting}
                       style={{
-                        background: submitting ? "rgba(17,24,39,0.55)" : "#111827",
-                        color: "#FAFAF8",
-                        border: "1px solid #111827",
+                        background: submitting ? "rgb(var(--ff-ink-rgb) / 0.55)" : "var(--ff-ink)",
+                        color: "var(--ff-paper)",
+                        border: "1px solid var(--ff-ink)",
                         padding: "14px 44px",
                         fontFamily: "'Montserrat', sans-serif",
                         fontWeight: 500,
@@ -794,12 +832,12 @@ export default function PublicFormPage() {
                               cx="7"
                               cy="7"
                               r="5.5"
-                              stroke="rgba(250,250,248,0.4)"
+                              stroke="rgb(var(--ff-paper-rgb) / 0.4)"
                               strokeWidth="1.5"
                             />
                             <path
                               d="M7 1.5a5.5 5.5 0 0 1 5.5 5.5"
-                              stroke="#FAFAF8"
+                              stroke="var(--ff-paper)"
                               strokeWidth="1.5"
                               strokeLinecap="round"
                             />
@@ -817,7 +855,7 @@ export default function PublicFormPage() {
                           fontFamily: "'PT Mono', monospace",
                           fontSize: 10,
                           letterSpacing: "0.06em",
-                          color: "#DC2626",
+                          color: "var(--ff-error)",
                         }}
                       >
                         Please fill in all required fields above
@@ -830,7 +868,7 @@ export default function PublicFormPage() {
                           fontFamily: "'PT Mono', monospace",
                           fontSize: 10,
                           letterSpacing: "0.06em",
-                          color: "#DC2626",
+                          color: "var(--ff-error)",
                         }}
                       >
                         {submitError}
@@ -844,7 +882,7 @@ export default function PublicFormPage() {
                           fontSize: 10,
                           letterSpacing: "0.07em",
                           textTransform: "uppercase",
-                          color: "rgba(17,24,39,0.28)",
+                          color: "rgb(var(--ff-ink-rgb) / 0.28)",
                         }}
                       >
                         Fields marked * are required
@@ -861,7 +899,7 @@ export default function PublicFormPage() {
       {/* Footer */}
       <footer
         style={{
-          borderTop: "1px solid rgba(17,24,39,0.09)",
+          borderTop: "1px solid rgb(var(--ff-ink-rgb) / 0.09)",
           padding: "22px 5vw",
           position: "relative",
           zIndex: 1,
@@ -885,7 +923,7 @@ export default function PublicFormPage() {
                 fontSize: 10,
                 letterSpacing: "0.08em",
                 textTransform: "uppercase",
-                color: "rgba(17,24,39,0.28)",
+                color: "rgb(var(--ff-ink-rgb) / 0.28)",
               }}
             >
               Powered by
@@ -900,20 +938,20 @@ export default function PublicFormPage() {
                   fontWeight: 900,
                   fontSize: 12,
                   letterSpacing: "-0.02em",
-                  color: "#111827",
+                  color: "var(--ff-ink)",
                 }}
               >
                 Go
               </span>
               <span
                 style={{
-                  border: "1px solid rgba(17,24,39,0.28)",
+                  border: "1px solid rgb(var(--ff-ink-rgb) / 0.28)",
                   padding: "0 5px",
                   fontFamily: "'PT Mono', monospace",
                   fontSize: 7,
                   letterSpacing: "0.1em",
                   textTransform: "uppercase",
-                  color: "rgba(17,24,39,0.38)",
+                  color: "rgb(var(--ff-ink-rgb) / 0.38)",
                 }}
               >
                 Form
@@ -927,12 +965,12 @@ export default function PublicFormPage() {
               fontSize: 10,
               letterSpacing: "0.07em",
               textTransform: "uppercase",
-              color: "rgba(17,24,39,0.32)",
+              color: "rgb(var(--ff-ink-rgb) / 0.32)",
               textDecoration: "none",
               transition: "color 0.2s",
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "#111827")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(17,24,39,0.32)")}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--ff-ink)")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "rgb(var(--ff-ink-rgb) / 0.32)")}
           >
             Create your own form →
           </Link>
